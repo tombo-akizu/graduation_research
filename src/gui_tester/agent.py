@@ -1,6 +1,7 @@
 # It is required to import them the first.
 import torch
-import intel_extension_for_pytorch as ipex
+try:    import intel_extension_for_pytorch as ipex
+except ImportError: "Ipex hasn't been installed. It isn't neccessary."
 import torch.nn as nn
 import torch.nn.utils.rnn as rnn
 from torch.optim import RMSprop
