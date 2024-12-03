@@ -1,56 +1,107 @@
 package callreport;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.Socket;
-import android.os.AsyncTask;
 import android.util.Log;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Arrays;
+import java.util.concurrent.locks.ReentrantLock;
+
+// TODO: Rewrite METHOD_NUM externally.
+
 public class CallReport {
+    private static final int METHOD_NUM = 221;
+    private static Thread th = null;
+    private static CalledMethods calledMethods;
+    private static final ReentrantLock lock = new ReentrantLock();
+
     public static void report(int methodId) {
-        // Construct NetworkTask with methodId and execute.
-        new NetworkTask(methodId).execute();
+        if (th == null) {
+            th = new Thread(CallReport::server);
+            th.start();
+            calledMethods = new CalledMethods(METHOD_NUM);
+        }
+        lock.lock();
+        try {
+            calledMethods.applyMethodCall(methodId);
+        } finally {
+            lock.unlock();
+        }
+        Log.d("CallReport", String.valueOf(methodId));
     }
 
-    private static class NetworkTask extends AsyncTask<Void, Void, Void> {
-        private final int methodId;
+    private static void server() {
+        Log.d("CallReport", "Thread start");
+        try {
+            // Port setting.
+            ServerSocket serverSocket = new ServerSocket(8080);
+            while (true) {
+                Log.d("CallReport", "Server start");
 
-        public NetworkTask(int methodId) {
-            this.methodId = methodId;
+                Socket socket = serverSocket.accept();
+
+                OutputStream out = socket.getOutputStream();
+
+                Log.d("CallReport", "Connection accept");
+
+                lock.lock();
+                try {
+                    byte[] stream = calledMethods.PopByteStream();
+                    Log.d("CallReport", "Under is array string");
+                    Log.d("CallReport", Arrays.toString(stream));
+                    out.write(stream);
+                    out.flush();
+                    Log.d("CallReport", "Data sent: " + Arrays.toString(stream));
+                } finally {
+                    lock.unlock();
+                    Log.d("CallReport", "finally finished");
+                }
+
+                // Disconnect.
+                out.close();
+                socket.close();
+            }
+        } catch (IOException e) {
+            Log.d("CallReport", e.toString());
+        }
+    }
+
+    private static class CalledMethods {
+        private final byte[] calledMethods;
+
+        public CalledMethods(int methodNum) {
+            int length = methodNum % Byte.SIZE == 0 ? methodNum / Byte.SIZE : methodNum / Byte.SIZE + 1;
+            this.calledMethods = new byte[length];
+            // this.printCalledMethods();
         }
 
-        @Override
-        protected Void doInBackground(Void... voids) {
-            Log.e("CallReport", "called");
-            Socket socket = null;
-            OutputStream os = null;
-            try {
-                InetAddress serverIp = InetAddress.getByName("10.0.2.2");
-                int port = 8000;
-                socket = new Socket(serverIp, port);
-                os = socket.getOutputStream();
-                // Write methodId on output stream.s
-                os.write(String.format("%03d", methodId).getBytes());
-            } catch (Exception e) {
-                Log.e("CallReport", e.toString());
-            } finally {
-                if (os != null) {
-                    try {
-                        os.close();
-                    } catch (IOException e) {
-                        Log.e("CallReport", "Failed to close OutputStream: " + e.toString());
-                    }
-                }
-                if (socket != null) {
-                    try {
-                        socket.close();
-                    } catch (IOException e) {
-                        Log.e("CallReport", "Failed to close Socket: " + e.toString());
-                    }
-                }
-            }
-            return null;
+        public void applyMethodCall(int calledMethodId) {
+            int index = calledMethodId / Byte.SIZE;
+            int deltaIndex = calledMethodId % Byte.SIZE;
+            this.calledMethods[index] |= (byte) (1 << deltaIndex);
+            // this.printCalledMethods();
+        }
+
+        // private void printCalledMethods() {
+        //     for (int i = this.calledMethods.length - 1; i >= 0; i--) {
+        //         for (int j = Byte.SIZE - 1; j >= 0; j--) {
+        //             if ((this.calledMethods[i] & (1 << j)) > 0) {
+        //                 System.out.print("1");
+        //             } else {
+        //                 System.out.print("0");
+        //             }
+        //         }
+        //         System.out.print(" ");
+        //     }
+        //     System.out.println();
+        // }
+
+        public byte[] PopByteStream() {
+            byte[] copy = Arrays.copyOf(this.calledMethods, this.calledMethods.length);
+            Arrays.fill(this.calledMethods, (byte)0);
+            return copy;
         }
     }
 }
