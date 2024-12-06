@@ -47,8 +47,63 @@ Windowsなら、「環境変数を編集」アプリケーションから、ANDR
 [参考資料](https://developer.android.com/tools/variables?hl=ja)
 
 # Lexica
+README.mdに従って、次のコマンドでビルドする。COSMOを使用するために、デバッグビルドする。
+```
+./gradlew assembleDebug
+```
+
 ## Issue
-### 1. Package name
-- AndroidManifestに、パッケージ名を加える
-- AndroidManifestに、exported属性を加える
-- Android Studioのターミナルで、READMEのコマンドを実行する
+### 1. InvocationTargetException
+環境: Mac
+gradle実行時に、次のエラーメッセージとともにビルド失敗する。
+```
+* What went wrong:
+Execution failed for task ':app:kaptDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask$KaptExecutionWorkAction
+   > java.lang.reflect.InvocationTargetException (no error message)
+```
+app/build.gradleの、88, 89行目を、以下のように変更するとビルドできる。  
+```
+implementation 'androidx.room:room-runtime:2.2.6'
+kapt 'androidx.room:room-compiler:2.2.6'
+```
+から、
+```
+implementation 'androidx.room:room-runtime:2.2.4'
+kapt 'androidx.room:room-compiler:2.2.4'
+```
+に修正する。
+
+## COSMO issue
+### 1. COSMO package error
+環境: Mac, Win
+cli.py実行時に、次のエラーが発生する。
+```
+KeyError: 'package'
+```
+app/main/AndroidManifest.xml (COSMO実行後はAndroidManifest.xml.old)の2行目を、以下のように変更する。
+```
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+```
+から、
+```
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.serwylo.lexica">
+```
+
+### 2. Exported attribute
+環境: Mac, Win
+COSMO実行後、アプリケーションをビルドする際に、次のエラーとともにビルド失敗する。
+```
+* What went wrong:
+Execution failed for task ':app:processDebugMainManifest'.
+> Manifest merger failed : android:exported needs to be explicitly specified for element <receiver#com.serwylo.lexica.EndCoverageBroadcast>. Apps targeting Android 12 and higher are required to specify an explicit value for `android:exported` when the corresponding component has an intent filter defined. See https://developer.android.com/guide/topics/manifest/activity-element#exported for details.
+```
+`app/src/main/AndroidManifest.xml` (oldではない)の6行目を、以下のように書き換える。
+```
+<receiver android:name=".EndCoverageBroadcast">
+```
+から
+```
+<receiver android:name=".EndCoverageBroadcast" android:exported="true">
+```
+とする。
