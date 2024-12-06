@@ -32,7 +32,7 @@ ESETは、研究室貸与PCに最初にインストールするよう指示さ�
 [参考資料](https://forum.eset.com/topic/41990-eset-block-gradle-after-latest-update/)  
 
 ### 2. No Android env
-環境: Mac
+環境: Mac  
 gradle実行時に、次のエラーメッセージとともにビルドが失敗する。
 ```
 Error: ANDROID_HOME is not set and "android" command not in your PATH.
@@ -54,7 +54,7 @@ README.mdに従って、次のコマンドでビルドする。COSMOを使用す
 
 ## Issue
 ### 1. InvocationTargetException
-環境: Mac
+環境: Mac  
 gradle実行時に、次のエラーメッセージとともにビルド失敗する。
 ```
 * What went wrong:
@@ -72,11 +72,12 @@ kapt 'androidx.room:room-compiler:2.2.6'
 implementation 'androidx.room:room-runtime:2.2.4'
 kapt 'androidx.room:room-compiler:2.2.4'
 ```
-に修正する。
+に修正する。  
+[参考資料](https://stackoverflow.com/questions/63649694/a-failure-occurred-while-executing-org-jetbrains-kotlin-gradle-internal-kaptexec)
 
 ## COSMO issue
 ### 1. COSMO package error
-環境: Mac, Win
+環境: Mac, Win  
 cli.py実行時に、次のエラーが発生する。
 ```
 KeyError: 'package'
@@ -91,14 +92,14 @@ app/main/AndroidManifest.xml (COSMO実行後はAndroidManifest.xml.old)の2行�
 ```
 
 ### 2. Exported attribute
-環境: Mac, Win
+環境: Mac, Win  
 COSMO実行後、アプリケーションをビルドする際に、次のエラーとともにビルド失敗する。
 ```
 * What went wrong:
 Execution failed for task ':app:processDebugMainManifest'.
 > Manifest merger failed : android:exported needs to be explicitly specified for element <receiver#com.serwylo.lexica.EndCoverageBroadcast>. Apps targeting Android 12 and higher are required to specify an explicit value for `android:exported` when the corresponding component has an intent filter defined. See https://developer.android.com/guide/topics/manifest/activity-element#exported for details.
 ```
-`app/src/main/AndroidManifest.xml` (oldではない)の6行目を、以下のように書き換える。
+エラーメッセージに従って、`app/src/main/AndroidManifest.xml` (oldではない)の6行目を、以下のように書き換える。
 ```
 <receiver android:name=".EndCoverageBroadcast">
 ```
