@@ -9,10 +9,11 @@ import java.net.Socket;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 
-// TODO: Rewrite METHOD_NUM externally.
 
 public class CallReport {
-    private static final int METHOD_NUM = 221;
+    // METHOD_NUM is rewritten externally by instrument execution.
+    private static final int METHOD_NUM = 0;
+
     private static Thread th = null;
     private static CalledMethods calledMethods;
     private static final ReentrantLock lock = new ReentrantLock();

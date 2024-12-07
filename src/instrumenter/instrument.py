@@ -78,6 +78,10 @@ class Instrumenter:
     def save_instrumentdata(self, pkl_save_path):
         pickle.dump(self.instrument_data, open(pkl_save_path, "wb"))
 
+    # Returns how many methods are.
+    def get_method_num(self):
+        return self.method_id
+
 # Replace None with empty string.
 def non_none_str(str):
     return str if str != None else ""

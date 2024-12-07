@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+import instrumenter.add_file as add_file            # type: ignore
 from instrumenter.instrument import Instrumenter    # type: ignore
 
 def run_instrument(project_root, new_project):
@@ -17,6 +18,7 @@ def run_instrument(project_root, new_project):
         print("This project seems to be already instrumented...")
         sys.exit(2)
 
+    # Collect source files
     java_path_list = []
     kt_path_list = []
     for cur_dir, dirs, files in os.walk("project/app/src/main"):
@@ -31,11 +33,12 @@ def run_instrument(project_root, new_project):
             elif extension == ".kt":
                 kt_path_list.append(cur_dir + '/' + file_name)
 
+    # Insert call of CallReport.callreport.
     instrumenter = Instrumenter()
     for java_path in java_path_list:
         instrumenter.instrument(java_path)
 
-    os.mkdir("project/app/src/main/java/callreport")
-    shutil.copy("template/CallReport.java", "project/app/src/main/java/callreport/")
+    # Add template/CallReport.java into the project.
+    add_file.add_file(instrumenter.get_method_num())
 
     instrumenter.save_instrumentdata("instrument_data/instrument.pkl")
