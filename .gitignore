@@ -3,3 +3,4 @@
 project/
 __pycache__/
 *.apk
+.DS_Store
