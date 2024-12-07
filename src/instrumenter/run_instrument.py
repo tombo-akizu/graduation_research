@@ -4,20 +4,19 @@ import sys
 import instrumenter.add_file as add_file            # type: ignore
 from instrumenter.instrument import Instrumenter    # type: ignore
 
-def run_instrument(project_root, new_project):
-    if new_project:
-        if os.path.isdir("project"):
-            shutil.rmtree("project")
-        shutil.copytree(project_root, "project", ignore=shutil.ignore_patterns(".git", ".gitignore"))
-
-    if not os.path.exists("project/app/src/main"):
+def run_instrument(project_root):
+    if not os.path.exists(os.path.join(project_root, "app/src/main")):
         print("Give root directory of the project.")
         sys.exit(1)
 
-    if os.path.exists("project/app/src/main/java/callreport"):
+    if os.path.exists(os.path.join(project_root, "app/src/main/java/callreport")):
         print("This project seems to be already instrumented...")
         sys.exit(2)
 
+    if os.path.isdir("project"):
+        shutil.rmtree("project")
+ 
+    shutil.copytree(project_root, "project", ignore=shutil.ignore_patterns(".git", ".gitignore"))
     # Collect source files
     java_path_list = []
     kt_path_list = []

@@ -14,7 +14,6 @@ if __name__ == "__main__":
                                                 """
                                             )
     parser_instrument.add_argument("--project_root", type=str, required=True, help="Path to the root directory of the project to copy.")
-    parser_instrument.add_argument("--new_project", action="store_true", help="If you give this argument, we remove current project and reload project_root.")
 
     # Subcommand and args for GUI tester.
     parser_tester = subparsers.add_parser("gui_tester", help="Run in GUI tester mode")
@@ -32,7 +31,7 @@ if __name__ == "__main__":
 
     # Execute other function with argument.
     if args.mode == "instrument":
-        run_instrument.run_instrument(args.project_root, args.new_project)
+        run_instrument.run_instrument(args.project_root)
     elif args.mode == "gui_tester":
         run_gui_tester.run_gui_tester(args.package, args.apk_path, args.device_name, args.limit_hour, args.limit_episode, args.target_method_id, args.model)
     else:
