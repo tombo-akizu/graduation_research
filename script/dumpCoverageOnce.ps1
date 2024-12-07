@@ -1,5 +1,5 @@
 if ($args.Count -lt 3) {
-    echo "Usage: dumpCoverageOnce.sh <pkg_name> <outdir> <index>"
+    echo "Usage: dumpCoverageOnce.ps1 <pkg_name> <outdir> <index>"
     exit
 }
 $pkg = $args[0]

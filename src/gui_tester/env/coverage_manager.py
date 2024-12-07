@@ -9,7 +9,10 @@ class CoverageManager():
         self.line_coverage = 0
 
     def update_coverage(self):
-        subprocess.run(['powershell', '-ExecutionPolicy', 'Bypass', '-File', './script/dumpCoverageOnce.ps1', self.config.package, "./result", str(self.index)])
+        if os.name == "nt": # win
+            subprocess.run(['powershell', '-ExecutionPolicy', 'Bypass', '-File', './script/dumpCoverageOnce.ps1', self.config.package, "./result", str(self.index)])
+        else:               # mac or linux
+            subprocess.run(["./script/dumpCoverageOnce.sh", self.config.package, "./result", str(self.index)])
 
         tree = ET.parse('{}/coverage{}/coverage.xml'.format("./result", self.index))
         root = tree.getroot()
