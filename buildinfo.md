@@ -16,7 +16,7 @@ gradlewは、gradle wrapperといい、gradleのインターフェイスであ�
 
 オープンソースAndroidプロジェクトには、gradlew及びgradleビルドスクリプトが含まれている場合がある。  
 
-## Issue
+## General issue
 ### 1. ESET
 環境: Mac  
 gradle実行時に、次のエラーメッセージとともにビルドが失敗することがある。
@@ -32,19 +32,30 @@ ESETは、研究室貸与PCに最初にインストールするよう指示さ�
 [参考資料](https://forum.eset.com/topic/41990-eset-block-gradle-after-latest-update/)  
 
 ### 2. No Android env
-環境: Mac  
-gradle実行時に、次のエラーメッセージとともにビルドが失敗する。
+環境: Mac, Win  
+gradle実行時に、次のエラーメッセージとともにビルドが失敗する。(Mac)
 ```
 Error: ANDROID_HOME is not set and "android" command not in your PATH.
 ```
-Android_HOME環境変数を設定する。  
+Winでは、次のエラーメッセージを確認した。  
+```
+* What went wrong:
+Could not determine the dependencies of task ':app:compileDebugJavaWithJavac'.
+> SDK location not found. Define a valid SDK location with an ANDROID_HOME environment variable or by setting the sdk.dir path in your project's local properties file at 'lexica_root\local.properties'.
+```
+ANDROID_HOME環境変数を設定する。  
 Macなら、~/.zshrcに、次を追加する。
 ```
 export ANDROID_HOME=~/Library/Android/sdk
 export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
 ```
-Windowsなら、「環境変数を編集」アプリケーションから、ANDROID_HOME環境変数を設定する。  
+Windowsなら、「環境変数を編集」アプリケーションから、ANDROID_HOME環境変数作成し、Android SDKのパスを代入する。  
+私の環境では、`~/AppData/Local/Android/Sdk`だった。  
 [参考資料](https://developer.android.com/tools/variables?hl=ja)
+
+### 3. Last Resort
+何らかのビルド問題がどうしても解決しない場合、`~/.gradle/caches`の中身を全て削除してから再ビルドすると、上手くいくことがある。  
+私も数回、これで問題が解決したことがある。試してみてほしい。
 
 # Lexica
 README.mdに従って、次のコマンドでビルドする。COSMOを使用するために、デバッグビルドする。
@@ -52,7 +63,7 @@ README.mdに従って、次のコマンドでビルドする。COSMOを使用す
 ./gradlew assembleDebug
 ```
 
-## Issue
+## Issue of Lexica
 ### 1. InvocationTargetException
 環境: Mac  
 gradle実行時に、次のエラーメッセージとともにビルド失敗する。
@@ -75,7 +86,7 @@ kapt 'androidx.room:room-compiler:2.2.4'
 に修正する。  
 [参考資料](https://stackoverflow.com/questions/63649694/a-failure-occurred-while-executing-org-jetbrains-kotlin-gradle-internal-kaptexec)
 
-## COSMO issue
+## COSMO issue of Lexica
 ### 1. COSMO package error
 環境: Mac, Win  
 cli.py実行時に、次のエラーが発生する。
