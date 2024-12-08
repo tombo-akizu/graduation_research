@@ -53,6 +53,8 @@ Windowsなら、「環境変数を編集」アプリケーションから、ANDR
 私の環境では、`~/AppData/Local/Android/Sdk`だった。  
 [参考資料](https://developer.android.com/tools/variables?hl=ja)
 
+環境変数設定後は、シェルを再起動することを勧める。  
+
 ### 3. Last Resort
 何らかのビルド問題がどうしても解決しない場合、`~/.gradle/caches`の中身を全て削除してから再ビルドすると、上手くいくことがある。  
 私も数回、これで問題が解決したことがある。試してみてほしい。
@@ -103,6 +105,7 @@ app/main/AndroidManifest.xml (COSMO実行後はAndroidManifest.xml.old)の2行�
 ```
 
 ### 2. Exported attribute
+**本Issueを回避する操作を、README.mdのSetupに追加した。**  
 環境: Mac, Win  
 COSMO実行後、アプリケーションをビルドする際に、次のエラーとともにビルド失敗する。
 ```
