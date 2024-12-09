@@ -18,12 +18,22 @@ class TrainData():
     def set_priority(self, agent, experience):
         self.priority = agent.calc_td_error(self, experience)
 
+    def __eq__(self, other):
+        if self.target_method_id != other.target_method_id: return False
+        if self.state != other.state: return False
+        if self.action_idx != other.action_idx: return False
+        if self.new_state != other.new_state: return False
+        if self.path != other.path: return False
+        return True
+
 class ReplayBuffer():
     def __init__(self, config):
         self.buffer = deque([], maxlen=config.replay_ratio)
         self.off_per = config.off_per
 
     def push(self, item: TrainData):
+        if item in self.buffer:
+            self.buffer.remove(item)
         self.buffer.append(item)    # If the deque overflows, the first item is removed.
 
     def sample(self, batch_size):

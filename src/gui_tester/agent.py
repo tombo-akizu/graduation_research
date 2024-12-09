@@ -150,9 +150,16 @@ class Agent():
 
         # Collect Q'(s_t+1, argmax_a Q(s_t+1, a))
         with torch.no_grad():
-            target_q = self.target_dqn(new_state_batch, new_path_batch).gather(dim=1, index=argmax_action.unsqueeze(1)).squeeze()
+            target_q = self.target_dqn(new_state_batch, new_path_batch)
+            if not self.config.off_unactionable_flooring:
+                for i, new_state_t in enumerate(new_state_batch):
+                    mask = torch.ones(self.config.state_size, dtype=torch.bool).to("cpu")
+                    mask[new_state_t[1:] > 0] = False
+                    target_q[i, mask] = torch.min(target_q[i,:]).item()
+            
+            selected_action_indices = target_q.gather(dim=1, index=argmax_action.unsqueeze(1)).squeeze()
 
-        expected_state_action_values = reward_batch + self.config.discount_rate * target_q
+        expected_state_action_values = reward_batch + self.config.discount_rate * selected_action_indices
 
         # Compute loss
         if self.config.off_per:

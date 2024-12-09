@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.nn.utils.rnn as rnn
 
 class LSTM(nn.Module):
 
@@ -20,7 +21,8 @@ class LSTM(nn.Module):
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, state, path):
-        # out, (h, c) = self.lstm(path)
+        mask = ~torch.all(path == -2, dim=1)
+        path = path[mask]
         out, h = self.lstm(path)
 
         # dim=-1 merges tensor with last dimention.

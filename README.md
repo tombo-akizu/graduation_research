@@ -93,10 +93,11 @@ method_idは環境によって変動するので注意
 - Networkの入力に、target_method_idをとる
 
 性能向上タスク
-- reward rising
-- prioritized experience replay
-- sequenceの0埋め
-- 重複報酬の削除
-- target_valueにおける、無効な行動の値
-- ε調整
-- episode_length調整
+- [x] reward rising
+- [x] prioritized experience replay
+- [x] sequenceの0埋め
+- [x] 重複報酬の削除
+- [x] target_valueにおける、無効な行動の値
+- [x] ε調整
+- [x] episode_length調整
+- [x] 関数呼び出しなしの行動に負の報酬を

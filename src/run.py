@@ -24,6 +24,7 @@ if __name__ == "__main__":
     parser_tester.add_argument("--model", type=str, required=True, help="Model name of reinforcement learning agent: 4LP, 4LPWithPath, or LSTM.")
     parser_tester.add_argument("--off_reward_rising", action="store_true", help="If you provide this argument, the reward will stop increasing over time.")
     parser_tester.add_argument("--off_per", action="store_true", help="If you provide this argument, the PER (Prioritized Experience Replay) will be disabled.")
+    parser_tester.add_argument("--off_unactionable_flooring", action="store_true", help="If you provide this argument, flooring impossible action's Q value to minimum value is disabled.")
 
     group = parser_tester.add_mutually_exclusive_group(required=True)
     group.add_argument('--limit_hour', type=float, help="Specify the time limit of GUI test in hours.")
@@ -44,7 +45,8 @@ if __name__ == "__main__":
             args.target_method_id, 
             args.model, 
             args.off_reward_rising, 
-            args.off_per
+            args.off_per,
+            args.off_unactionable_flooring
             )
     else:
         parser.print_help()

@@ -50,21 +50,36 @@ class Experience():
     def create_train_data(self, method_num, global_step, agent):
         assert len(self.experience[-1]) >= 2
         called_methods_bits = self.experience[-1][-1].called_methods
-        for i in range(method_num):
-            if (called_methods_bits & (1 << i)) > 0:
-                for step_idx, experience_item in enumerate(self.experience[-1][1:], start=1):   # enumerate starts from 1 because self.experience[-1][0].state == None.
-                    step_num = self.__step_num_to_call_method(step_idx, i)
-                    data = TrainData(
-                        i, 
-                        self.state_list[experience_item.state_id], 
-                        experience_item.action_idx, 
-                        self.__calc_reward(step_num, i, global_step), 
-                        self.state_list[experience_item.new_state_id], 
-                        experience_item.path.clone()
-                        )
-                    if not self.config.off_per:
-                        data.set_priority(agent, self)
-                    self.replay_buffer.push(data)
+        if called_methods_bits == 0:
+            for i in range(method_num):
+                experience_item = self.experience[-1][-1]
+                data = TrainData(
+                    i,
+                    self.state_list[experience_item.state_id], 
+                    experience_item.action_idx, 
+                    -0.001,
+                    self.state_list[experience_item.new_state_id], 
+                    experience_item.path.clone()
+                )
+                if not self.config.off_per:
+                    data.set_priority(agent, self)
+                self.replay_buffer.push(data)
+        else:
+            for i in range(method_num):
+                if (called_methods_bits & (1 << i)) > 0:
+                    for step_idx, experience_item in enumerate(self.experience[-1][1:], start=1):   # enumerate starts from 1 because self.experience[-1][0].state == None.
+                        step_num = self.__step_num_to_call_method(step_idx, i)
+                        data = TrainData(
+                            i, 
+                            self.state_list[experience_item.state_id], 
+                            experience_item.action_idx, 
+                            self.__calc_reward(step_num, i, global_step), 
+                            self.state_list[experience_item.new_state_id], 
+                            experience_item.path.clone()
+                            )
+                        if not self.config.off_per:
+                            data.set_priority(agent, self)
+                        self.replay_buffer.push(data)
     
     def __step_num_to_call_method(self, departure, method_id):
         step_idx = departure

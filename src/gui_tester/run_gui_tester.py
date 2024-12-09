@@ -12,8 +12,8 @@ import gui_tester.report as report                      # type: ignore
 import gui_tester.tcp_client as client                  # type: ignore
 import logger                                           # type: ignore
 
-def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, target_method_id, model, off_reward_rising, off_per):
-    config = Config(package, apk_path, model, off_reward_rising, off_per)
+def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, target_method_id, model, off_reward_rising, off_per, off_unactionable_flooring):
+    config = Config(package, apk_path, model, off_reward_rising, off_per, off_unactionable_flooring)
     env = Environment(device_name, config)
     progress = progress_manager.create_progress_manager(limit_hour, limit_episode, config)
     agent = Agent(config)
