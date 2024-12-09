@@ -1,4 +1,4 @@
-from gui_tester.path import Path
+from gui_tester.path import Path                                # type: ignore
 from gui_tester.replay_buffer import ReplayBuffer, TrainData    # type: ignore
 
 class ExperienceItem():
@@ -47,7 +47,7 @@ class Experience():
     def state_repeats_too_much(self):
         return self.state_repeat_counter > self.config.max_state_repeat
 
-    def create_train_data(self, method_num):
+    def create_train_data(self, method_num, global_step, agent):
         assert len(self.experience[-1]) >= 2
         called_methods_bits = self.experience[-1][-1].called_methods
         for i in range(method_num):
@@ -58,10 +58,12 @@ class Experience():
                         i, 
                         self.state_list[experience_item.state_id], 
                         experience_item.action_idx, 
-                        self.__calc_reward(experience_item, step_num, i), 
+                        self.__calc_reward(step_num, i, global_step), 
                         self.state_list[experience_item.new_state_id], 
                         experience_item.path.clone()
                         )
+                    if not self.config.off_per:
+                        data.set_priority(agent, self)
                     self.replay_buffer.push(data)
     
     def __step_num_to_call_method(self, departure, method_id):
@@ -73,14 +75,20 @@ class Experience():
             step_num += 1
         return step_num
     
-    def __calc_reward(self, experience_item: ExperienceItem, step_num, method_id):
+    def __calc_reward(self, step_num, method_id, global_step):
         if step_num == 0:
             if self.path_has_been_taken(method_id):
                 return -0.001
-            return 1
+            return 1 * self.__calc_reward_rising(global_step)
         if self.path_has_been_taken(method_id):
             return -0.001
-        return 0.01 * (self.config.discount_rate ** step_num)
+        return 0.01 * (self.config.discount_rate ** step_num) * self.__calc_reward_rising(global_step)
+        
+    def __calc_reward_rising(self, global_step):
+        if self.config.off_reward_rising:
+            return 1
+        else:
+            return 1 + global_step * self.config.reward_rise_rate
         
     def path_has_been_taken(self, method_id):
         for episode in self.experience[:-1]:
@@ -100,3 +108,6 @@ class Experience():
     
     def get_current_path(self):
         return self.current_path
+    
+    def reset_priority(self, agent):
+        self.replay_buffer.reset_priority(agent, self)

@@ -85,3 +85,18 @@ AndroidManifest.xmlのmanifestの子ノードとして、以下を追加する�
 一旦保留して、他のアプリケーションの状態をみて決定する
 
 method_idは環境によって変動するので注意
+
+
+リファクタリング要求
+- Networkの分離
+- State_dictの分離
+- Networkの入力に、target_method_idをとる
+
+性能向上タスク
+- reward rising
+- prioritized experience replay
+- sequenceの0埋め
+- 重複報酬の削除
+- target_valueにおける、無効な行動の値
+- ε調整
+- episode_length調整

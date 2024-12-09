@@ -5,7 +5,7 @@ import subprocess
 from instrument_data import InstrumentData  # type: ignore
 
 class Config():
-    def __init__(self, package, apk_path, model):
+    def __init__(self, package, apk_path, model, off_reward_rising, off_per):
         self.package = package
         self.apk_path = apk_path
         self.install_timeout = 20
@@ -46,3 +46,7 @@ class Config():
         self.method_num = len(instrument_data)
 
         self.model = model
+
+        self.off_reward_rising = off_reward_rising
+        self.reward_rise_rate = 1.0 / 900.0 # About 900 steps are taken in an hour.
+        self.off_per = off_per

@@ -1,7 +1,7 @@
 # It is required to import them the first.
 import torch
 try:    import intel_extension_for_pytorch as ipex
-except ImportError: "Ipex hasn't been installed. It isn't neccessary."
+except ImportError: "Ipex hasn't been installed. But it isn't neccessary."
 import torch.nn as nn
 import torch.nn.utils.rnn as rnn
 from torch.optim import RMSprop
@@ -9,11 +9,11 @@ from torch.optim import RMSprop
 import copy
 import random
 
-from gui_tester.models.four_lp import FourLP
-from gui_tester.models.four_lp_with_path import FourLPWithPath
-from gui_tester.models.lstm import LSTM
-from gui_tester.path import Path
-import logger
+from gui_tester.models.four_lp import FourLP                    # type: ignore
+from gui_tester.models.four_lp_with_path import FourLPWithPath  # type: ignore
+from gui_tester.models.lstm import LSTM                         # type: ignore
+from gui_tester.replay_buffer import TrainData                  # type: ignore
+import logger   # type: ignore
 
 class Agent():
     def __init__(self, config):
@@ -34,15 +34,18 @@ class Agent():
         elif config.model == "LSTM":
             self.policy_dqn = LSTM(config)
         else:
-            assert False
+            assert False, "Invalid model name."
 
         self.target_dqn = copy.deepcopy(self.policy_dqn)
         self.optim = RMSprop(self.policy_dqn.parameters(), lr=config.learning_rate)
 
         self.policy_dqn = self.policy_dqn.to("cpu")
         self.target_dqn = self.target_dqn.to("cpu")
-        self.criterion = nn.MSELoss().to("cpu")
-        # self.policy_dqn, self.optim = ipex.optimize(self.policy_dqn, optimizer=self.optim)
+        if self.config.off_per:
+            self.criterion = nn.MSELoss().to("cpu")
+        else:
+            self.criterion = nn.MSELoss(reduction="none").to("cpu")
+        # self.policy_dqn, self.optim = ipex.optimize(self.policy_dqn, optimizer=self.optim)    # For ipex user.
 
         # Loss value cache.
         self.loss = 0
@@ -121,9 +124,11 @@ class Agent():
         action_idx_batch        = torch.tensor([data.action_idx for data in batch]          , dtype=torch.int64     ).to("cpu")
         reward_batch            = torch.tensor([data.reward for data in batch]              , dtype=torch.float32   ).to("cpu")
         new_state_batch         = torch.tensor([data.new_state for data in batch]           , dtype=torch.float32   ).to("cpu")
+        priority_batch          = torch.tensor([data.priority for data in batch]            , dtype=torch.float32   ).to("cpu")
 
         state_batch = torch.cat((target_method_id_batch.unsqueeze(1), state_batch), dim=1)
         new_state_batch = torch.cat((target_method_id_batch.unsqueeze(1), new_state_batch), dim=1)
+        priority_weight_batch = torch.reciprocal(priority_batch)
 
         if self.config.model == "4LP" or self.config.model == "4LPWithPath":
             path_list = [data.path.get_tensor(self.config) for data in batch]
@@ -150,7 +155,11 @@ class Agent():
         expected_state_action_values = reward_batch + self.config.discount_rate * target_q
 
         # Compute loss
-        loss = self.criterion(state_action_values, expected_state_action_values)
+        if self.config.off_per:
+            loss = self.criterion(state_action_values, expected_state_action_values)
+        else:
+            loss = self.criterion(state_action_values, expected_state_action_values)
+            loss = (loss * priority_weight_batch).mean()
 
         self.loss = loss.item()
 
@@ -172,3 +181,34 @@ class Agent():
 
     def get_loss(self):
         return self.loss
+    
+    def calc_td_error(self, train_data: TrainData, experience):
+        state = torch.tensor((train_data.target_method_id,) + train_data.state, dtype=torch.float32).to("cpu")
+        new_state = torch.tensor((train_data.target_method_id,) + train_data.new_state, dtype=torch.float32).to("cpu")
+
+        new_path = train_data.path.clone().append(experience.get_state_id(train_data.new_state))
+
+        if self.config.model == "4LP" or self.config.model == "4LPWithPath":
+            path_tensor = train_data.path.get_tensor(self.config).to("cpu")
+            new_path_tensor = new_path.get_tensor(self.config).to("cpu")
+        elif self.config.model == "LSTM":
+            path_tensor = train_data.path.get_path_sequence_tensor(experience, self.config).to("cpu")
+            new_path_tensor = new_path.get_path_sequence_tensor(experience, self.config).to("cpu")            
+
+        state = torch.unsqueeze(state, dim=0)   # forward of LSTM requires 3-dim tensor...
+        new_state = torch.unsqueeze(new_state, dim=0)
+        path_tensor = torch.unsqueeze(path_tensor, dim=0)
+        new_path_tensor = torch.unsqueeze(new_path_tensor, dim=0)
+
+        with torch.no_grad():
+            target_q = self.target_dqn(new_state, new_path_tensor)
+
+            mask = torch.ones(self.config.state_size, dtype=torch.bool).to("cpu")
+            mask[new_state[0, 1:] > 0] = False
+            target_q[:, mask] = -float("inf")
+            target = torch.max(target_q, dim=1).values.item()
+            
+            predict = self.policy_dqn(state, path_tensor)[0, train_data.action_idx]
+
+        td_error = abs(train_data.reward + target - predict).item()
+        return td_error

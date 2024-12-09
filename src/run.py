@@ -3,7 +3,7 @@ import instrumenter.run_instrument as run_instrument    # type: ignore
 import gui_tester.run_gui_tester as run_gui_tester      # type: ignore
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run script with instrument or GUI tester mode.")
+    parser = argparse.ArgumentParser(description="Run script with instrument mode or GUI tester mode.")
     subparsers = parser.add_subparsers(dest="mode", help="Choose a mode to run")
 
     # Subcommand and args for instrument.
@@ -22,6 +22,8 @@ if __name__ == "__main__":
     parser_tester.add_argument("--device_name", default="emulator-5554", help="Android device name")
     parser_tester.add_argument("--target_method_id", type=int, required=True, help="Index of method you want to test in instrument_data of src/instrumenter/instrument.py")
     parser_tester.add_argument("--model", type=str, required=True, help="Model name of reinforcement learning agent: 4LP, 4LPWithPath, or LSTM.")
+    parser_tester.add_argument("--off_reward_rising", action="store_true", help="If you provide this argument, the reward will stop increasing over time.")
+    parser_tester.add_argument("--off_per", action="store_true", help="If you provide this argument, the PER (Prioritized Experience Replay) will be disabled.")
 
     group = parser_tester.add_mutually_exclusive_group(required=True)
     group.add_argument('--limit_hour', type=float, help="Specify the time limit of GUI test in hours.")
@@ -33,6 +35,16 @@ if __name__ == "__main__":
     if args.mode == "instrument":
         run_instrument.run_instrument(args.project_root)
     elif args.mode == "gui_tester":
-        run_gui_tester.run_gui_tester(args.package, args.apk_path, args.device_name, args.limit_hour, args.limit_episode, args.target_method_id, args.model)
+        run_gui_tester.run_gui_tester(
+            args.package, 
+            args.apk_path, 
+            args.device_name, 
+            args.limit_hour, 
+            args.limit_episode, 
+            args.target_method_id, 
+            args.model, 
+            args.off_reward_rising, 
+            args.off_per
+            )
     else:
         parser.print_help()

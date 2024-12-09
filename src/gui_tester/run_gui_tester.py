@@ -12,8 +12,8 @@ import gui_tester.report as report                      # type: ignore
 import gui_tester.tcp_client as client                  # type: ignore
 import logger                                           # type: ignore
 
-def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, target_method_id, model):
-    config = Config(package, apk_path, model)
+def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, target_method_id, model, off_reward_rising, off_per):
+    config = Config(package, apk_path, model, off_reward_rising, off_per)
     env = Environment(device_name, config)
     progress = progress_manager.create_progress_manager(limit_hour, limit_episode, config)
     agent = Agent(config)
@@ -142,9 +142,11 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
             called_methods = client.get_method_bits()
 
             experience.append(current_state, agent.get_component_group_idx(action), new_state, called_methods)
-            experience.create_train_data(config.method_num)
+            experience.create_train_data(config.method_num, global_step, agent)
             agent.optimize_model(experience)
             agent.update_target_network()
+            if not config.off_per:
+                experience.reset_priority(agent)
 
             report.push(agent.get_component_group_idx(action), new_state, experience.get_state_id(new_state), agent.get_loss(), (called_methods & (1 << target_method_id)) > 0, experience.get_current_path().clone(), new_screen_status, global_step)
             if (called_methods & (1 << target_method_id)) > 0:
