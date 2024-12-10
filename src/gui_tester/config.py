@@ -2,6 +2,8 @@ import pickle
 import re
 import subprocess
 
+import torch
+
 from instrument_data import InstrumentData  # type: ignore
 
 class Config():
@@ -51,3 +53,10 @@ class Config():
         self.reward_rise_rate = 1.0 / 900.0 # About 900 steps are taken in an hour.
         self.off_per = off_per
         self.off_unactionable_flooring = off_unactionable_flooring
+
+        if torch.cuda.is_available():
+            self.torch_device = "cuda"
+        elif torch.backends.mps.is_available():
+            self.torch_device = "mps"
+        else:
+            self.torch_device = "cpu"

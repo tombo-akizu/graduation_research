@@ -1,7 +1,5 @@
 # It is required to import them the first.
 import torch
-try:    import intel_extension_for_pytorch as ipex
-except ImportError: "Ipex hasn't been installed. But it isn't neccessary."
 import torch.nn as nn
 import torch.nn.utils.rnn as rnn
 from torch.optim import RMSprop
@@ -39,13 +37,12 @@ class Agent():
         self.target_dqn = copy.deepcopy(self.policy_dqn)
         self.optim = RMSprop(self.policy_dqn.parameters(), lr=config.learning_rate)
 
-        self.policy_dqn = self.policy_dqn.to("cpu")
-        self.target_dqn = self.target_dqn.to("cpu")
+        self.policy_dqn = self.policy_dqn.to(self.config.torch_device)
+        self.target_dqn = self.target_dqn.to(self.config.torch_device)
         if self.config.off_per:
-            self.criterion = nn.MSELoss().to("cpu")
+            self.criterion = nn.MSELoss().to(self.config.torch_device)
         else:
-            self.criterion = nn.MSELoss(reduction="none").to("cpu")
-        # self.policy_dqn, self.optim = ipex.optimize(self.policy_dqn, optimizer=self.optim)    # For ipex user.
+            self.criterion = nn.MSELoss(reduction="none").to(self.config.torch_device)
 
         # Loss value cache.
         self.loss = 0
@@ -81,12 +78,12 @@ class Agent():
         return random.choice(components)
     
     def select_action_greedily(self, components, state, target_mathod_id, experience):
-        state = torch.tensor((target_mathod_id,) + state, dtype=torch.float32).to("cpu")
+        state = torch.tensor((target_mathod_id,) + state, dtype=torch.float32).to(self.config.torch_device)
 
         if self.config.model == "4LP" or self.config.model == "4LPWithPath":
-            path_tensor = experience.get_current_path().get_tensor(self.config).to("cpu")
+            path_tensor = experience.get_current_path().get_tensor(self.config).to(self.config.torch_device)
         elif self.config.model == "LSTM":
-            path_tensor = experience.get_current_path().get_path_sequence_tensor(experience, self.config).to("cpu")
+            path_tensor = experience.get_current_path().get_path_sequence_tensor(experience, self.config).to(self.config.torch_device)
         
         state = torch.unsqueeze(state, dim=0)   # forward of LSTM requires 3-dim tensor...
         path_tensor = torch.unsqueeze(path_tensor, dim=0)
@@ -100,7 +97,7 @@ class Agent():
 
         assert len(actionable_group_ids) > 0
 
-        mask = torch.ones(q.shape[0], dtype=torch.bool).to("cpu")
+        mask = torch.ones(q.shape[0], dtype=torch.bool).to(self.config.torch_device)
         mask[actionable_group_ids] = False
         q[mask] = -float("inf")
 
@@ -119,12 +116,12 @@ class Agent():
             logger.logger.info("empty batch")
             return
         
-        target_method_id_batch  = torch.tensor([data.target_method_id for data in batch]                            ).to("cpu")
-        state_batch             = torch.tensor([data.state for data in  batch]              , dtype=torch.float32   ).to("cpu")
-        action_idx_batch        = torch.tensor([data.action_idx for data in batch]          , dtype=torch.int64     ).to("cpu")
-        reward_batch            = torch.tensor([data.reward for data in batch]              , dtype=torch.float32   ).to("cpu")
-        new_state_batch         = torch.tensor([data.new_state for data in batch]           , dtype=torch.float32   ).to("cpu")
-        priority_batch          = torch.tensor([data.priority for data in batch]            , dtype=torch.float32   ).to("cpu")
+        target_method_id_batch  = torch.tensor([data.target_method_id for data in batch]                            ).to(self.config.torch_device)
+        state_batch             = torch.tensor([data.state for data in  batch]              , dtype=torch.float32   ).to(self.config.torch_device)
+        action_idx_batch        = torch.tensor([data.action_idx for data in batch]          , dtype=torch.int64     ).to(self.config.torch_device)
+        reward_batch            = torch.tensor([data.reward for data in batch]              , dtype=torch.float32   ).to(self.config.torch_device)
+        new_state_batch         = torch.tensor([data.new_state for data in batch]           , dtype=torch.float32   ).to(self.config.torch_device)
+        priority_batch          = torch.tensor([data.priority for data in batch]            , dtype=torch.float32   ).to(self.config.torch_device)
 
         state_batch = torch.cat((target_method_id_batch.unsqueeze(1), state_batch), dim=1)
         new_state_batch = torch.cat((target_method_id_batch.unsqueeze(1), new_state_batch), dim=1)
@@ -133,13 +130,13 @@ class Agent():
         if self.config.model == "4LP" or self.config.model == "4LPWithPath":
             path_list = [data.path.get_tensor(self.config) for data in batch]
             new_path_list = [data.path.clone().append(experience.get_state_id(data.new_state)).get_tensor(self.config) for data in batch]
-            path_batch = torch.stack(path_list).to("cpu")
-            new_path_batch = torch.stack(new_path_list).to("cpu")
+            path_batch = torch.stack(path_list).to(self.config.torch_device)
+            new_path_batch = torch.stack(new_path_list).to(self.config.torch_device)
         elif self.config.model == "LSTM":
             path_list = [data.path.get_path_sequence_tensor(experience, self.config) for data in batch]
             new_path_list = [data.path.clone().append(experience.get_state_id(data.new_state)).get_path_sequence_tensor(experience, self.config) for data in batch]
-            path_batch = rnn.pad_sequence(path_list, batch_first=True, padding_value=-2).to("cpu")
-            new_path_batch = rnn.pad_sequence(new_path_list, batch_first=True, padding_value=-2).to("cpu")
+            path_batch = rnn.pad_sequence(path_list, batch_first=True, padding_value=-2).to(self.config.torch_device)
+            new_path_batch = rnn.pad_sequence(new_path_list, batch_first=True, padding_value=-2).to(self.config.torch_device)
             path_lengths = (path_batch != -2).any(dim=2).sum(dim=1)
             new_path_lengths = (new_path_batch != -2).any(dim=2).sum(dim=1)
             packed_path = rnn.pack_padded_sequence(path_batch, path_lengths.cpu(), batch_first=True, enforce_sorted=False)
@@ -157,7 +154,7 @@ class Agent():
             target_q = self.target_dqn(new_state_batch, packed_new_path)
             if not self.config.off_unactionable_flooring:
                 for i, new_state_t in enumerate(new_state_batch):
-                    mask = torch.ones(self.config.state_size, dtype=torch.bool).to("cpu")
+                    mask = torch.ones(self.config.state_size, dtype=torch.bool).to(self.config.torch_device)
                     mask[new_state_t[1:] > 0] = False
                     target_q[i, mask] = torch.min(target_q[i,:]).item()
             
@@ -194,17 +191,17 @@ class Agent():
         return self.loss
     
     def calc_td_error(self, train_data: TrainData, experience):
-        state = torch.tensor((train_data.target_method_id,) + train_data.state, dtype=torch.float32).to("cpu")
-        new_state = torch.tensor((train_data.target_method_id,) + train_data.new_state, dtype=torch.float32).to("cpu")
+        state = torch.tensor((train_data.target_method_id,) + train_data.state, dtype=torch.float32).to(self.config.torch_device)
+        new_state = torch.tensor((train_data.target_method_id,) + train_data.new_state, dtype=torch.float32).to(self.config.torch_device)
 
         new_path = train_data.path.clone().append(experience.get_state_id(train_data.new_state))
 
         if self.config.model == "4LP" or self.config.model == "4LPWithPath":
-            path_tensor = train_data.path.get_tensor(self.config).to("cpu")
-            new_path_tensor = new_path.get_tensor(self.config).to("cpu")
+            path_tensor = train_data.path.get_tensor(self.config).to(self.config.torch_device)
+            new_path_tensor = new_path.get_tensor(self.config).to(self.config.torch_device)
         elif self.config.model == "LSTM":
-            path_tensor = train_data.path.get_path_sequence_tensor(experience, self.config).to("cpu")
-            new_path_tensor = new_path.get_path_sequence_tensor(experience, self.config).to("cpu")            
+            path_tensor = train_data.path.get_path_sequence_tensor(experience, self.config).to(self.config.torch_device)
+            new_path_tensor = new_path.get_path_sequence_tensor(experience, self.config).to(self.config.torch_device)            
 
         state = torch.unsqueeze(state, dim=0)   # forward of LSTM requires 3-dim tensor...
         new_state = torch.unsqueeze(new_state, dim=0)
@@ -214,7 +211,7 @@ class Agent():
         with torch.no_grad():
             target_q = self.target_dqn(new_state, new_path_tensor)
 
-            mask = torch.ones(self.config.state_size, dtype=torch.bool).to("cpu")
+            mask = torch.ones(self.config.state_size, dtype=torch.bool).to(self.config.torch_device)
             mask[new_state[0, 1:] > 0] = False
             target_q[:, mask] = -float("inf")
             target = torch.max(target_q, dim=1).values.item()
