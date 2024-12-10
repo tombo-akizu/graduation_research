@@ -21,9 +21,10 @@ class LSTM(nn.Module):
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, state, path):
-        mask = ~torch.all(path == -2, dim=1)
-        path = path[mask]
         out, h = self.lstm(path)
+
+        if not isinstance(out, torch.Tensor):
+            out, _ = rnn.pad_packed_sequence(out, batch_first=True, padding_value=-2)
 
         # dim=-1 merges tensor with last dimention.
         #   If called from select_action_greedily, merge tensor with dim=0.

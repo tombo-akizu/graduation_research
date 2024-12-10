@@ -22,7 +22,7 @@ class Config():
         self.state_size = 500
 
         self.max_state_repeat = 10
-        self.max_ep_length = 40
+        self.max_ep_length = 20
 
         # How many times the gui_tester calculate coverage (max).
         self.coverage_frequency = 100
