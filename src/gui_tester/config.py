@@ -33,7 +33,7 @@ class Config():
         self.replay_ratio = 10000
 
         self.discount_rate = 0.5
-        self.soft_update_rate = 0.1   # tau
+        self.soft_update_rate = 0.005   # tau
 
         self.max_action_num = 500
         self.learning_rate = 0.00025

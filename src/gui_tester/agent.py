@@ -139,19 +139,20 @@ class Agent():
             new_path_batch = rnn.pad_sequence(new_path_list, batch_first=True, padding_value=-2).to(self.config.torch_device)
             path_lengths = (path_batch != -2).any(dim=2).sum(dim=1)
             new_path_lengths = (new_path_batch != -2).any(dim=2).sum(dim=1)
-            packed_path = rnn.pack_padded_sequence(path_batch, path_lengths.cpu(), batch_first=True, enforce_sorted=False)
-            packed_new_path = rnn.pack_padded_sequence(new_path_batch, new_path_lengths.cpu(), batch_first=True, enforce_sorted=False)
+
+            path_batch = rnn.pack_padded_sequence(path_batch, path_lengths.cpu(), batch_first=True, enforce_sorted=False)
+            new_path_batch = rnn.pack_padded_sequence(new_path_batch, new_path_lengths.cpu(), batch_first=True, enforce_sorted=False)
         else:
             assert False
 
-        state_action_values = self.policy_dqn(state_batch, packed_path).gather(dim=1, index=action_idx_batch.unsqueeze(1)).squeeze()
+        state_action_values = self.policy_dqn(state_batch, path_batch).gather(dim=1, index=action_idx_batch.unsqueeze(1)).squeeze()
 
         # Compute argmax_a Q(s_t+1, a).
-        argmax_action = torch.argmax(self.policy_dqn(new_state_batch, packed_new_path), dim=-1)
+        argmax_action = torch.argmax(self.policy_dqn(new_state_batch, new_path_batch), dim=-1)
 
         # Collect Q'(s_t+1, argmax_a Q(s_t+1, a))
         with torch.no_grad():
-            target_q = self.target_dqn(new_state_batch, packed_new_path)
+            target_q = self.target_dqn(new_state_batch, new_path_batch)
             if not self.config.off_unactionable_flooring:
                 for i, new_state_t in enumerate(new_state_batch):
                     mask = torch.ones(self.config.state_size, dtype=torch.bool).to(self.config.torch_device)
