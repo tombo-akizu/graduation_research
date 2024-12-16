@@ -101,3 +101,8 @@ method_idは環境によって変動するので注意
 - [x] ε調整
 - [x] episode_length調整
 - [x] 関数呼び出しなしの行動に負の報酬を
+
+```
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+```
+python 3.9で確認。3.8に変更すれば解決
