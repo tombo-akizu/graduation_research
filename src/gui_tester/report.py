@@ -89,3 +89,6 @@ def output_report():
 
     for item in report_path_log:
         logger.logger.info("Path {} is found at {}'th step.".format(item.path, item.global_step))
+
+    with open("result/path.txt", "w") as f:
+        f.write(str(len(report_path_log)))

@@ -13,7 +13,7 @@ class Config():
         self.install_timeout = 20
 
         self.epsilon_start = 1.0
-        self.epsilon_end = 0.1
+        self.epsilon_end = 0.5
         self.epsilon_episode_end = 50
 
         result = subprocess.run(['adb', 'shell', 'wm', 'size'], capture_output=True, text=True).stdout
