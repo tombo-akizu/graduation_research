@@ -1,5 +1,11 @@
 import re
 
+import gui_tester.config as config  # type: ignore
+
+# List of GUI group's key.
+# Components with the same resource-id and actionabilities are in the same component group.
+component_group_list = []
+
 class Component():
     def __init__(
             self,
@@ -21,6 +27,16 @@ class Component():
         self.is_long_clickable = is_long_clickable
         self.is_scrollable = is_scrollable
         self.is_checkable = is_checkable
+
+        global component_group_list
+        key = self.get_group_key()
+        if key in component_group_list:
+            self.id = component_group_list.index(key)
+        else:
+            self.id = len(component_group_list)
+            component_group_list.append(key)
+
+        assert len(component_group_list) <= config.config.state_size
         
     def from_node(node, label):
         bounds = Component.__get_bound_from_string(node.attrib["bounds"])
@@ -33,7 +49,7 @@ class Component():
                 node.attrib["scrollable"] == "true",
                 node.attrib["checkable"] == "true")
     
-    # Returns key of agent.Agent.component_group_dict.
+    # Returns key of GUI group.
     def get_group_key(self):
         return (
             self.resource_id,

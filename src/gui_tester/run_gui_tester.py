@@ -7,6 +7,7 @@ from gui_tester.agent import Agent                      # type: ignore
 from gui_tester.config import Config                    # type: ignore
 from gui_tester.env.env import Environment              # type: ignore
 from gui_tester.experience import Experience            # type: ignore
+from gui_tester.state import State                      # type: ignore
 import gui_tester.progress_manager as progress_manager  # type: ignore
 import gui_tester.report as report                      # type: ignore
 import gui_tester.tcp_client as client                  # type: ignore
@@ -59,12 +60,11 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
             env.reboot()
             continue
 
-        agent.update_component_group_dict(current_screen_components)
-        current_state = agent.get_state(current_screen_components)
+        current_state = State(current_screen_components)
 
         called_methods = client.get_method_bits()   # Methods called on the initial state of the application.
         experience.append(None, None, current_state, called_methods)
-        report.push(None, current_state, experience.get_state_id(current_state), None, (called_methods & (1 << target_method_id)) > 0, experience.get_current_path().clone(), current_screen_status, global_step)
+        report.push(None, current_state, None, (called_methods & (1 << target_method_id)) > 0, experience.get_current_path().clone(), current_screen_status, global_step)
         if (called_methods & (1 << target_method_id)) > 0:
             logger.logger.info("Target method is called.")
 
@@ -132,8 +132,7 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
                 logger.logger.warning("Failed to recover from out of app.")
                 is_terminal = True
 
-            agent.update_component_group_dict(new_screen_components)
-            new_state = agent.get_state(new_screen_components)
+            new_state = State(new_screen_components)
 
             is_terminal = is_terminal or experience.state_repeats_too_much() or (step == config.max_ep_length)
             if experience.state_repeats_too_much():
@@ -141,14 +140,14 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
             
             called_methods = client.get_method_bits()
 
-            experience.append(current_state, agent.get_component_group_idx(action), new_state, called_methods)
+            experience.append(current_state, action.id, new_state, called_methods)
             experience.create_train_data(config.method_num, global_step, agent)
-            agent.optimize_model(experience)
+            agent.optimize_model(experience.sample_batch())
             agent.update_target_network()
             if not config.off_per:
                 experience.reset_priority(agent)
 
-            report.push(agent.get_component_group_idx(action), new_state, experience.get_state_id(new_state), agent.get_loss(), (called_methods & (1 << target_method_id)) > 0, experience.get_current_path().clone(), new_screen_status, global_step)
+            report.push(action.id, new_state, agent.get_loss(), (called_methods & (1 << target_method_id)) > 0, experience.get_current_path().clone(), new_screen_status, global_step)
             if (called_methods & (1 << target_method_id)) > 0:
                 logger.logger.info("Target method is called.")
 

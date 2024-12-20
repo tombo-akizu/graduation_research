@@ -6,6 +6,8 @@ import torch
 
 from instrument_data import InstrumentData  # type: ignore
 
+config = None
+
 class Config():
     def __init__(self, package, apk_path, model, off_reward_rising, off_per, off_unactionable_flooring):
         self.package = package
@@ -60,3 +62,6 @@ class Config():
             self.torch_device = "mps"
         else:
             self.torch_device = "cpu"
+
+        global config
+        config = self

@@ -20,10 +20,6 @@ class Agent():
         self.epsilon = 0
         self.epsilon_step = (config.epsilon_start - config.epsilon_end) / config.epsilon_episode_end
 
-        # Dictionary whose key is component group and whose value is its ID.
-        # Components with the same resource-id and actionabilities are in the same component group.
-        self.component_group_dict = {}
-
         # Switch model with config.model
         if config.model == "4LP":
             self.policy_dqn = FourLP(config)
@@ -39,6 +35,7 @@ class Agent():
 
         self.policy_dqn = self.policy_dqn.to(self.config.torch_device)
         self.target_dqn = self.target_dqn.to(self.config.torch_device)
+
         if self.config.off_per:
             self.criterion = nn.MSELoss().to(self.config.torch_device)
         else:
@@ -51,49 +48,28 @@ class Agent():
     def update_epsilon(self, current_episode):
         if current_episode < self.config.epsilon_episode_end:
             self.epsilon = self.config.epsilon_start - self.epsilon_step * current_episode
-
-    # Update self.component_group_dict with the current components.
-    # If there is a component whose component_group hasn't recorded yet in self.component_group_dict, record it.
-    def update_component_group_dict(self, components):
-        for component in components:
-            key = component.get_group_key()
-            if not key in self.component_group_dict:
-                idx = len(self.component_group_dict)
-                self.component_group_dict[key] = idx
-        assert len(self.component_group_dict) <= self.config.state_size
-
-    # Get state-embedding vector.
-    # Each item of state-embedding vector is count of GUI components in a component group.
-    # Call after update_component_group_dict.
-    def get_state(self, components):
-        state = [0] * self.config.state_size
-        for component in components:
-            key = component.get_group_key()
-            assert key in self.component_group_dict
-            idx = self.component_group_dict[key]
-            state[idx] += 1
-        return tuple(state)
     
     def select_action_randomly(self, components):
         return random.choice(components)
     
     def select_action_greedily(self, components, state, target_mathod_id, experience):
-        state = torch.tensor((target_mathod_id,) + state, dtype=torch.float32).to(self.config.torch_device)
+        target_mathod_id_tensor = torch.tensor([target_mathod_id], dtype=torch.float32)
+        input = torch.cat((target_mathod_id_tensor, state.get_tensor())).to(self.config.torch_device)
 
         if self.config.model == "4LP" or self.config.model == "4LPWithPath":
             path_tensor = experience.get_current_path().get_tensor(self.config).to(self.config.torch_device)
         elif self.config.model == "LSTM":
-            path_tensor = experience.get_current_path().get_path_sequence_tensor(experience, self.config).to(self.config.torch_device)
+            path_tensor = experience.get_current_path().get_path_sequence_tensor().to(self.config.torch_device)
         
-        state = torch.unsqueeze(state, dim=0)   # forward of LSTM requires 3-dim tensor...
+        input = torch.unsqueeze(input, dim=0)   # forward of LSTM requires 3-dim tensor...
         path_tensor = torch.unsqueeze(path_tensor, dim=0)
 
         with torch.no_grad():
-            q = self.policy_dqn(state, path_tensor)
+            q = self.policy_dqn(input, path_tensor)
 
         q = torch.squeeze(q, dim=0)
 
-        actionable_group_ids = list({self.component_group_dict[component.get_group_key()] for component in components})
+        actionable_group_ids = [component.id for component in components]
 
         assert len(actionable_group_ids) > 0
 
@@ -103,38 +79,37 @@ class Agent():
 
         max_index = torch.argmax(q).item()
 
-        components_with_max_q_value = [component for component in components if self.component_group_dict[component.get_group_key()] == max_index]
+        components_with_max_q_value = [component for component in components if component.id == max_index]
         return random.choice(components_with_max_q_value)
-    
-    def get_component_group_idx(self, component):
-        return self.component_group_dict[component.get_group_key()]
-    
-    def optimize_model(self, experience):
-        batch = experience.replay_buffer.sample(self.config.batch_size)
-
+        
+    def optimize_model(self, batch):
         if len(batch) == 0:
             logger.logger.info("empty batch")
             return
         
-        target_method_id_batch  = torch.tensor([data.target_method_id for data in batch]                            ).to(self.config.torch_device)
-        state_batch             = torch.tensor([data.state for data in  batch]              , dtype=torch.float32   ).to(self.config.torch_device)
         action_idx_batch        = torch.tensor([data.action_idx for data in batch]          , dtype=torch.int64     ).to(self.config.torch_device)
         reward_batch            = torch.tensor([data.reward for data in batch]              , dtype=torch.float32   ).to(self.config.torch_device)
-        new_state_batch         = torch.tensor([data.new_state for data in batch]           , dtype=torch.float32   ).to(self.config.torch_device)
         priority_batch          = torch.tensor([data.priority for data in batch]            , dtype=torch.float32   ).to(self.config.torch_device)
 
-        state_batch = torch.cat((target_method_id_batch.unsqueeze(1), state_batch), dim=1)
-        new_state_batch = torch.cat((target_method_id_batch.unsqueeze(1), new_state_batch), dim=1)
+        state_list = []
+        new_state_list = []
+        for data in batch:
+            target_method_id_tensor = torch.tensor([data.target_method_id], dtype=torch.float32)
+            state_list.append(torch.cat((target_method_id_tensor, data.state.get_tensor())))
+            new_state_list.append(torch.cat((target_method_id_tensor, data.new_state.get_tensor())))
+        state_batch     = torch.stack(state_list)       .to(self.config.torch_device)
+        new_state_batch = torch.stack(new_state_list)   .to(self.config.torch_device)
+
         priority_weight_batch = torch.reciprocal(priority_batch)
 
         if self.config.model == "4LP" or self.config.model == "4LPWithPath":
             path_list = [data.path.get_tensor(self.config) for data in batch]
-            new_path_list = [data.path.clone().append(experience.get_state_id(data.new_state)).get_tensor(self.config) for data in batch]
+            new_path_list = [data.path.clone().append(data.new_state).get_tensor(self.config) for data in batch]
             path_batch = torch.stack(path_list).to(self.config.torch_device)
             new_path_batch = torch.stack(new_path_list).to(self.config.torch_device)
         elif self.config.model == "LSTM":
-            path_list = [data.path.get_path_sequence_tensor(experience, self.config) for data in batch]
-            new_path_list = [data.path.clone().append(experience.get_state_id(data.new_state)).get_path_sequence_tensor(experience, self.config) for data in batch]
+            path_list = [data.path.get_path_sequence_tensor() for data in batch]
+            new_path_list = [data.path.clone().append(data.new_state).get_path_sequence_tensor() for data in batch]
             path_batch = rnn.pad_sequence(path_list, batch_first=True, padding_value=-2).to(self.config.torch_device)
             new_path_batch = rnn.pad_sequence(new_path_list, batch_first=True, padding_value=-2).to(self.config.torch_device)
             path_lengths = (path_batch != -2).any(dim=2).sum(dim=1)
@@ -192,17 +167,18 @@ class Agent():
         return self.loss
     
     def calc_td_error(self, train_data: TrainData, experience):
-        state = torch.tensor((train_data.target_method_id,) + train_data.state, dtype=torch.float32).to(self.config.torch_device)
-        new_state = torch.tensor((train_data.target_method_id,) + train_data.new_state, dtype=torch.float32).to(self.config.torch_device)
+        target_method_id_tensor = torch.tensor([train_data.target_method_id], dtype=torch.float32)
+        state = torch.cat((target_method_id_tensor, train_data.state.get_tensor())).to(self.config.torch_device)
+        new_state = torch.cat((target_method_id_tensor, train_data.new_state.get_tensor())).to(self.config.torch_device)
 
-        new_path = train_data.path.clone().append(experience.get_state_id(train_data.new_state))
+        new_path = train_data.path.clone().append(train_data.new_state)
 
         if self.config.model == "4LP" or self.config.model == "4LPWithPath":
             path_tensor = train_data.path.get_tensor(self.config).to(self.config.torch_device)
             new_path_tensor = new_path.get_tensor(self.config).to(self.config.torch_device)
         elif self.config.model == "LSTM":
-            path_tensor = train_data.path.get_path_sequence_tensor(experience, self.config).to(self.config.torch_device)
-            new_path_tensor = new_path.get_path_sequence_tensor(experience, self.config).to(self.config.torch_device)            
+            path_tensor = train_data.path.get_path_sequence_tensor().to(self.config.torch_device)
+            new_path_tensor = new_path.get_path_sequence_tensor().to(self.config.torch_device)            
 
         state = torch.unsqueeze(state, dim=0)   # forward of LSTM requires 3-dim tensor...
         new_state = torch.unsqueeze(new_state, dim=0)

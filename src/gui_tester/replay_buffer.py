@@ -4,9 +4,10 @@ import random
 import torch
 
 from gui_tester.path import Path    # type: ignore
+from gui_tester.state import State  # type: ignore
 
 class TrainData():
-    def __init__(self, target_method_id, state: tuple, action_idx, reward, new_state: tuple, path: Path):
+    def __init__(self, target_method_id, state: State, action_idx, reward, new_state: State, path: Path):
         self.target_method_id = target_method_id
         self.state = state
         self.action_idx = action_idx
@@ -29,30 +30,30 @@ class TrainData():
 class ReplayBuffer():
     def __init__(self, config):
         self.buffer = deque([], maxlen=config.replay_ratio)
-        self.off_per = config.off_per
+        self.config = config
 
     def push(self, item: TrainData):
         if item in self.buffer:
             self.buffer.remove(item)
         self.buffer.append(item)    # If the deque overflows, the first item is removed.
 
-    def sample(self, batch_size):
-        if self.off_per:
-            if len(self) < batch_size:
+    def sample(self):
+        if self.config.off_per:
+            if len(self) < self.config.batch_size:
                 return random.sample(self.buffer, len(self))   # list of sampled data
             else:
-                return random.sample(self.buffer, batch_size)
+                return random.sample(self.buffer, self.config.batch_size)
         else:
-            if len(self) < batch_size:
-                batch_size = len(self)
+            if len(self) < self.config.batch_size:
+                self.config.batch_size = len(self)
 
             sum, roulette = self.__get_priority_sum_and_roulette()
-            rand = torch.rand(batch_size) * sum
+            rand = torch.rand(self.config.batch_size) * sum
             rand = torch.sort(rand).values
             i = 0
             j = 0
             batch = []
-            while i < batch_size:
+            while i < self.config.batch_size:
                 if rand[i] < roulette[j]:
                     batch.append(self.buffer[j])
                     i += 1

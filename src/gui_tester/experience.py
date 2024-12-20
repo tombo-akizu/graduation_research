@@ -1,11 +1,12 @@
 from gui_tester.path import Path                                # type: ignore
 from gui_tester.replay_buffer import ReplayBuffer, TrainData    # type: ignore
+from gui_tester.state import State                              # type: ignore
 
 class ExperienceItem():
-    def __init__(self, state_id: int, action_idx: int, new_state_id: int, called_methods: int, path: Path):
-        self.state_id = state_id
+    def __init__(self, state: State, action_idx: int, new_state: State, called_methods: int, path: Path):
+        self.state = state
         self.action_idx = action_idx
-        self.new_state_id = new_state_id
+        self.new_state = new_state
         self.called_methods = called_methods
         self.path = path
 
@@ -21,9 +22,6 @@ class Experience():
         self.config = config
         self.replay_buffer = ReplayBuffer(config)
 
-        # List of unique states. state_id is the index in state_list.
-        self.state_list = []
-
         self.current_path = Path()
 
     def start_new_episode(self):
@@ -31,12 +29,10 @@ class Experience():
         self.state_repeat_counter = 0
         self.current_path = Path()
 
-    def append(self, state: tuple, action_idx: int, new_state: tuple, called_methods: int):
-        state_id = self.get_state_id(state)
-        new_state_id = self.get_state_id(new_state)
-        self.current_path.append(new_state_id)
-        self.experience[-1].append(ExperienceItem(state_id, action_idx, new_state_id, called_methods, self.current_path.clone()))
-        if state_id == new_state_id:
+    def append(self, state: State, action_idx: int, new_state: State, called_methods: int):
+        self.current_path.append(new_state)
+        self.experience[-1].append(ExperienceItem(state, action_idx, new_state, called_methods, self.current_path.clone()))
+        if (state != None) and (state == new_state):    # On the first step of the episode, state == None.
             self.state_repeat_counter += 1
         else:
             self.state_repeat_counter = 0
@@ -55,10 +51,10 @@ class Experience():
                 experience_item = self.experience[-1][-1]
                 data = TrainData(
                     i,
-                    self.state_list[experience_item.state_id], 
+                    experience_item.state, 
                     experience_item.action_idx, 
                     -0.001,
-                    self.state_list[experience_item.new_state_id], 
+                    experience_item.new_state, 
                     experience_item.path.clone()
                 )
                 if not self.config.off_per:
@@ -71,10 +67,10 @@ class Experience():
                         step_num = self.__step_num_to_call_method(step_idx, i)
                         data = TrainData(
                             i, 
-                            self.state_list[experience_item.state_id], 
+                            experience_item.state, 
                             experience_item.action_idx, 
                             self.__calc_reward(step_num, i, global_step), 
-                            self.state_list[experience_item.new_state_id], 
+                            experience_item.new_state, 
                             experience_item.path.clone()
                             )
                         if not self.config.off_per:
@@ -114,15 +110,12 @@ class Experience():
             if (step.called_methods & (1 << method_id)) != 0:
                 if self.current_path == step.path: return True
         return False
-
-    def get_state_id(self, state):
-        if not state in self.state_list:
-            self.state_list.append(state)
-            return len(self.state_list) - 1
-        return self.state_list.index(state)
     
     def get_current_path(self):
         return self.current_path
     
     def reset_priority(self, agent):
         self.replay_buffer.reset_priority(agent, self)
+
+    def sample_batch(self):
+        return self.replay_buffer.sample()

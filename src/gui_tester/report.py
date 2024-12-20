@@ -2,14 +2,13 @@ import csv
 
 from matplotlib import pyplot as plt
 
-from gui_tester.path import Path
-import logger
+from gui_tester.path import Path    # type: ignore
+import logger                       # type: ignore
 
 class ReportItem():
-    def __init__(self, action, new_state, new_state_id, loss, target_is_called, new_state_status, path):
+    def __init__(self, action, new_state, loss, target_is_called, new_state_status, path):
         self.action = action
         self.new_state = new_state
-        self.new_state_id = new_state_id
         self.loss = loss
         self.target_is_called = target_is_called
         self.new_state_status = new_state_status
@@ -27,10 +26,10 @@ def start_new_episode():
     global report_item_log
     report_item_log.append([])
 
-def push(action, new_state, new_state_id, loss, target_is_called, current_path: Path, new_state_status: str, global_step):
+def push(action, new_state, loss, target_is_called, current_path: Path, new_state_status: str, global_step):
     global report_item_log
     global report_path_log
-    report_item_log[-1].append(ReportItem(action, new_state, new_state_id, loss, target_is_called, new_state_status, current_path))
+    report_item_log[-1].append(ReportItem(action, new_state, loss, target_is_called, new_state_status, current_path))
     if target_is_called:
         flag = False
         for item in report_path_log:
@@ -54,8 +53,8 @@ def output_report():
                 writer.writerow([
                     str(j), 
                     str(report_item.action), 
-                    str(report_item.new_state), 
-                    str(report_item.new_state_id), 
+                    str(report_item.new_state.get_tuple()), 
+                    str(report_item.new_state.id), 
                     report_item.new_state_status,
                     str(report_item.loss), 
                     str(report_item.target_is_called),

@@ -1,39 +1,39 @@
 import torch
 
-class Path:
-    OUT_OF_APP = -1
+from gui_tester.state import State  # type: ignore
 
+class Path:
     def __init__(self):
         self.path_list = []
 
-    def append(self, state_id: int):
-        self.path_list.append(state_id)
+    def append(self, state: State):
+        self.path_list.append(state)
         self.cut_loop()
         return self
 
     def clone(self):
         return Path.create_clone(self.path_list)
 
+    # Get set of covered states.
     def get_tensor(self, config):
+        # The last item is for OUT_OF_APP state.
         bool_list = [False] * (config.state_size + 1)
         for state in self.path_list:
-            if state == Path.OUT_OF_APP:
+            if state.is_out_of_app:
                 bool_list[-1] = True
             else:
-                bool_list[state] = True
+                bool_list[state.id] = True
         return torch.tensor(bool_list, dtype=torch.bool)
     
-    def get_path_sequence_tensor(self, experience, config):
+    # Get sequence of covered states.
+    def get_path_sequence_tensor(self):
         tensors = []
-        for state_id in self.path_list:
-            if state_id == Path.OUT_OF_APP:
-                tensors.append(torch.tensor([0] * config.state_size, dtype=torch.float32))
-            else:
-                tensors.append(torch.tensor(experience.state_list[state_id], dtype=torch.float32))
+        for state in self.path_list:
+            tensors.append(state.get_tensor())
         return torch.stack(tensors)
     
     def append_out_of_app(self):
-        self.path_list.append(Path.OUT_OF_APP)
+        self.path_list.append(State.create_out_of_app())
         self.cut_loop()
 
     def cut_loop(self):
@@ -55,7 +55,10 @@ class Path:
         return self.path_list == other.path_list    # Python compares list deeply.
     
     def __str__(self):
-        return str(self.path_list)
+        out = ""
+        for state in self.path_list:
+            out += str(state) + ", "
+        return out
 
     def create_clone(path_list):
         new_path = Path()
