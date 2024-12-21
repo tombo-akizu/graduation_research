@@ -3,22 +3,22 @@ import time
 
 from uiautomator2.exceptions import DeviceError, RPCUnknownError    # type: ignore
 
-from gui_tester.agent import Agent                      # type: ignore
-from gui_tester.config import Config                    # type: ignore
 from gui_tester.env.env import Environment              # type: ignore
 from gui_tester.experience import Experience            # type: ignore
 from gui_tester.state import State                      # type: ignore
+import gui_tester.config                                # type: ignore
 import gui_tester.progress_manager as progress_manager  # type: ignore
+import gui_tester.agent                                 # type: ignore
 import gui_tester.report as report                      # type: ignore
 import gui_tester.tcp_client as client                  # type: ignore
 import logger                                           # type: ignore
 
 def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, target_method_id, model, off_reward_rising, off_per, off_unactionable_flooring):
-    config = Config(package, apk_path, model, off_reward_rising, off_per, off_unactionable_flooring)
-    env = Environment(device_name, config)
-    progress = progress_manager.create_progress_manager(limit_hour, limit_episode, config)
-    agent = Agent(config)
-    experience = Experience(config)
+    config = gui_tester.config.create(package, apk_path, model, off_reward_rising, off_per, off_unactionable_flooring)
+    env = Environment(device_name)
+    progress = progress_manager.create_progress_manager(limit_hour, limit_episode)
+    agent = gui_tester.agent.create()
+    experience = Experience()
 
     global_step = 0
 

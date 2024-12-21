@@ -3,6 +3,7 @@ import random
 
 import torch
 
+import gui_tester.config as config  # type: ignore
 from gui_tester.path import Path    # type: ignore
 from gui_tester.state import State  # type: ignore
 
@@ -28,9 +29,8 @@ class TrainData():
         return True
 
 class ReplayBuffer():
-    def __init__(self, config):
-        self.buffer = deque([], maxlen=config.replay_ratio)
-        self.config = config
+    def __init__(self):
+        self.buffer = deque([], maxlen=config.config.replay_ratio)
 
     def push(self, item: TrainData):
         if item in self.buffer:
@@ -38,22 +38,22 @@ class ReplayBuffer():
         self.buffer.append(item)    # If the deque overflows, the first item is removed.
 
     def sample(self):
-        if self.config.off_per:
-            if len(self) < self.config.batch_size:
+        if config.config.off_per:
+            if len(self) < config.config.batch_size:
                 return random.sample(self.buffer, len(self))   # list of sampled data
             else:
-                return random.sample(self.buffer, self.config.batch_size)
+                return random.sample(self.buffer, config.config.batch_size)
         else:
-            if len(self) < self.config.batch_size:
-                self.config.batch_size = len(self)
+            if len(self) < config.config.batch_size:
+                config.config.batch_size = len(self)
 
             sum, roulette = self.__get_priority_sum_and_roulette()
-            rand = torch.rand(self.config.batch_size) * sum
+            rand = torch.rand(config.config.batch_size) * sum
             rand = torch.sort(rand).values
             i = 0
             j = 0
             batch = []
-            while i < self.config.batch_size:
+            while i < config.config.batch_size:
                 if rand[i] < roulette[j]:
                     batch.append(self.buffer[j])
                     i += 1

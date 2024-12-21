@@ -5,17 +5,17 @@ import xml.etree.ElementTree as ET
 
 from logger import logger                   # type: ignore
 from gui_tester.component import Component  # type: ignore
+import gui_tester.config as config          # type: ignore
 
 class Observer():
-    def __init__(self, package, config):
-        self.allow_packages = [package, "com.android.packageinstaller", "PopupWindow", "com.google.android.permissioncontroller", "com.android.internal.app.ResolverActivity"]
+    def __init__(self):
+        self.allow_packages = [config.config.package, "com.android.packageinstaller", "PopupWindow", "com.google.android.permissioncontroller", "com.android.internal.app.ResolverActivity"]
         self.group_regex = {
             "Input": r'(?i)(EditText|SearchBox|AutoCompleteTextView|AutoSuggestView|Field|Input|CheckBox|DatePicker|RadioButton|CheckedTextView|Switch|SeekBar)',
             "Button": r'(?i)(Button|GlyphView|ListItem)',
             "Navigation": r'(?i)(Toolbar|TitleBar|ActionBar|Menu|Navigation|SideBar|Drawer|AppBar|TabWidget)',
             "List": r'(?i)(ListView|RecyclerView|ListPopUpWindow|GridView|GroupView)'
         }
-        self.config = config
 
     def get_components(self, xml):
         root = ET.fromstring(xml)
@@ -44,8 +44,8 @@ class Observer():
                 "com.android.systemui:id/menu",
                 "com.android.systemui:id/menu",
                 False, False, False, False))
-        random_x = self.config.emulator_screen_width * random.uniform(0.1, 0.9)
-        random_y = self.config.emulator_screen_height * random.uniform(0.1, 0.9)          
+        random_x = config.config.emulator_screen_width * random.uniform(0.1, 0.9)
+        random_y = config.config.emulator_screen_height * random.uniform(0.1, 0.9)          
         components.append(Component("Button",
                 (random_x, random_y, random_x, random_y),
                 "Random.Touch",
@@ -123,6 +123,6 @@ class Observer():
         output = Observer.__grep(output, "mCurrentFocus")
         if "Application Error" in output:
             return "Application Error", False
-        is_of_target_application = self.config.package in output
-        activity_name = output.split('/')[-1].replace(self.config.package + '.', '').split('}')[0]    # original
+        is_of_target_application = config.config.package in output
+        activity_name = output.split('/')[-1].replace(config.config.package + '.', '').split('}')[0]    # original
         return activity_name, is_of_target_application

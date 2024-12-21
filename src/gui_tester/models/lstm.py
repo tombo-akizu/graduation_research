@@ -3,20 +3,21 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.utils.rnn as rnn
 
-class LSTM(nn.Module):
+import gui_tester.config as config  # type: ignore
 
-    def __init__(self, config):
+class LSTM(nn.Module):
+    def __init__(self):
         super(LSTM, self).__init__()
 
-        layer_size = config.state_size + 1 + config.state_size
+        layer_size = config.config.state_size + 1 + config.config.state_size
 
-        self.lstm = nn.LSTM(config.state_size, config.state_size, num_layers=2, batch_first=True)
+        self.lstm = nn.LSTM(config.config.state_size, config.config.state_size, num_layers=2, batch_first=True)
 
         # The input is a vector composed of state-vector, target-method, and path-vector.
         self.layer1 = nn.Linear(layer_size, layer_size)
 
         self.layer2 = nn.Linear(layer_size, layer_size)
-        self.layer3 = nn.Linear(layer_size, config.max_action_num)
+        self.layer3 = nn.Linear(layer_size, config.config.max_action_num)
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).

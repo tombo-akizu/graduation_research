@@ -2,17 +2,18 @@ import os
 import subprocess
 import xml.etree.ElementTree as ET
 
+import gui_tester.config as config  # type: ignore
+
 class CoverageManager():
-    def __init__(self, config):
-        self.config = config
+    def __init__(self):
         self.index = 0
         self.line_coverage = 0
 
     def update_coverage(self):
         if os.name == "nt": # win
-            subprocess.run(['powershell', '-ExecutionPolicy', 'Bypass', '-File', './script/dumpCoverageOnce.ps1', self.config.package, "./result", str(self.index)])
+            subprocess.run(['powershell', '-ExecutionPolicy', 'Bypass', '-File', './script/dumpCoverageOnce.ps1', config.config.package, "./result", str(self.index)])
         else:               # mac or linux
-            subprocess.run(["./script/dumpCoverageOnce.sh", self.config.package, "./result", str(self.index)])
+            subprocess.run(["./script/dumpCoverageOnce.sh", config.config.package, "./result", str(self.index)])
 
         tree = ET.parse('{}/coverage{}/coverage.xml'.format("./result", self.index))
         root = tree.getroot()

@@ -1,15 +1,15 @@
 import random
 import re
 
-from uiautomator2 import UiObjectNotFoundError, HTTPError   # type: ignore
+from uiautomator2 import UiObjectNotFoundError  # type: ignore
 
 from gui_tester.component import Component  # type: ignore
 import logger                               # type: ignore
+import gui_tester.config as config          # type: ignore
 
 class Executor():
-    def __init__(self, device, config):
+    def __init__(self, device):
         self.device = device
-        self.config = config
 
     def perform_action(self, action: Component):
         try:
@@ -21,7 +21,7 @@ class Executor():
                     self.press_ok()
                     logger.logger.info("Action performed: Input Text")
                 elif "Bar" in action.resource_id:
-                    self.device.swipe(bound_center[0], bound_center[1], self.config.emulator_screen_width / 2, bound_center[1])
+                    self.device.swipe(bound_center[0], bound_center[1], config.config.emulator_screen_width / 2, bound_center[1])
                     logger.logger.info("Action performed: Swipe to center")
                 else:
                     self.device.click(*bound_center)
@@ -46,7 +46,7 @@ class Executor():
                     self.device.swipe(bound_center[0], bound_center[1], 0, bound_center[1], 1)
                     logger.logger.info("Action performed: Swipe left")
                 elif 0.9 <= r <= 1.:  # Swipe from center to the right border of the screen
-                    self.device.swipe(bound_center[0], bound_center[1], self.config.emulator_screen_width, bound_center[1], 1)
+                    self.device.swipe(bound_center[0], bound_center[1], config.config.emulator_screen_width, bound_center[1], 1)
                     logger.logger.info("Action performed: Swipe right")
         except UiObjectNotFoundError as e:
             logger.logger.warning(e)

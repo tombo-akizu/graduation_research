@@ -1,5 +1,6 @@
 import torch
 
+import gui_tester.config as config  # type: ignore
 from gui_tester.state import State  # type: ignore
 
 class Path:
@@ -15,9 +16,9 @@ class Path:
         return Path.create_clone(self.path_list)
 
     # Get set of covered states.
-    def get_tensor(self, config):
+    def get_tensor(self):
         # The last item is for OUT_OF_APP state.
-        bool_list = [False] * (config.state_size + 1)
+        bool_list = [False] * (config.config.state_size + 1)
         for state in self.path_list:
             if state.is_out_of_app:
                 bool_list[-1] = True

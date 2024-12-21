@@ -7,20 +7,20 @@ import uiautomator2 as u2                               # type: ignore
 from uiautomator2 import DeviceError, RPCUnknownError   # type: ignore
 
 import logger                                   # type: ignore
+import gui_tester.config as config              # type: ignore
 from gui_tester.component import Component      # type: ignore
 from .coverage_manager import CoverageManager   # type: ignore
 from .executor import Executor                  # type: ignore
 from .observer import Observer                  # type: ignore
 
 class Environment():
-    def __init__(self, device_name, config):
+    def __init__(self, device_name):
         self.device = u2.connect(device_name)
-        self.config = config
         self.activities = []
         self.activities_blacklist = []
-        self.coverage = CoverageManager(config)
-        self.executor = Executor(self.device, config)
-        self.observer = Observer(self.config.package, config)
+        self.coverage = CoverageManager()
+        self.executor = Executor(self.device)
+        self.observer = Observer()
 
     def check_health(self):
         self.try_uiautomator_process(lambda: self.device.reset_uiautomator())
@@ -30,12 +30,12 @@ class Environment():
         self.__install()
 
         # Open target app.
-        subprocess.run(['adb', 'shell', 'monkey', '-p', self.config.package, '-c', 'android.intent.category.LAUNCHER', '1'])
+        subprocess.run(['adb', 'shell', 'monkey', '-p', config.config.package, '-c', 'android.intent.category.LAUNCHER', '1'])
 
         if len(self.activities) > 0:
             a = random.choice(self.activities)
             logger.logger.info("Jump to activity %s" % a)
-            result = subprocess.run(['adb', 'shell', 'am', 'start', '-n', '{}/.{}'.format(self.config.package, a)], capture_output=True, text=True)
+            result = subprocess.run(['adb', 'shell', 'am', 'start', '-n', '{}/.{}'.format(config.config.package, a)], capture_output=True, text=True)
             if result.stderr != "":
                 # Can't jump to a.
                 self.activities.remove(a)
@@ -48,22 +48,22 @@ class Environment():
     def __install(self):
         while True:
             try:
-                error = subprocess.run(["adb", "install", self.config.apk_path], timeout=self.config.install_timeout, capture_output=True, text=True).stderr
+                error = subprocess.run(["adb", "install", config.config.apk_path], timeout=config.config.install_timeout, capture_output=True, text=True).stderr
                 if error != "":
                     logger.logger.warning("Install error")
                     logger.logger.warning(error)
-                    subprocess.run(["adb", "uninstall", self.config.package])
+                    subprocess.run(["adb", "uninstall", config.config.package])
                     continue
                 break
             except subprocess.TimeoutExpired:
                 logger.logger.warning("Install timeout expired")
-                subprocess.run(["adb", "uninstall", self.config.package])
+                subprocess.run(["adb", "uninstall", config.config.package])
 
     def __uninstall(self):
-        subprocess.run(["adb", "uninstall", self.config.package])
+        subprocess.run(["adb", "uninstall", config.config.package])
 
     def get_components(self):
-        for _ in range(self.config.max_try_time_to_empty_screen):   # Handle a situation that there is no item to input but menu buttons.
+        for _ in range(config.config.max_try_time_to_empty_screen):   # Handle a situation that there is no item to input but menu buttons.
             xml = self.try_uiautomator_process(lambda: self.device.dump_hierarchy())
             components, status = self.observer.get_components(xml)
             if status == "Empty Screen":
@@ -80,7 +80,7 @@ class Environment():
 
     def handle_out_of_app(self):
         def process(self):
-            self.device.app_start(self.config.package)
+            self.device.app_start(config.config.package)
             time.sleep(2)
         self.try_uiautomator_process(functools.partial(process, self=self))
 
@@ -121,7 +121,7 @@ class Environment():
     ##     self.device.reset_uiautomator()
 
     def try_uiautomator_process(self, process):
-        for _ in range(self.config.max_uiautomator_retry):
+        for _ in range(config.config.max_uiautomator_retry):
             try:
                 return process()
             except (DeviceError, RPCUnknownError) as e:

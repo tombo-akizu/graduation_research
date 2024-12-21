@@ -1,11 +1,12 @@
 import datetime
 from tqdm import tqdm   # type: ignore
 
+import gui_tester.config as config  # type: ignore
+
 class ProgressManager():
-    def __init__(self, config):
+    def __init__(self):
         self.episode = 0
         self.start_time = datetime.datetime.now()
-        self.config = config
         self.is_to_calculate_coverage = False
 
     def update(self):
@@ -23,11 +24,11 @@ class ProgressManager():
         return f
 
 class ProgressManagerHour(ProgressManager):
-    def __init__(self, limit_hour, config):
-        super().__init__(config)
+    def __init__(self, limit_hour):
+        super().__init__()
         self.limit_sec = limit_hour * 3600
         self.elapse_sec = 0
-        self.interval = self.limit_sec / self.config.coverage_frequency
+        self.interval = self.limit_sec / config.config.coverage_frequency
         self.last_coverage_calculation = datetime.datetime.now()
 
     def update(self):
@@ -50,10 +51,10 @@ class ProgressManagerHour(ProgressManager):
         return self.elapse_sec >= self.limit_sec
 
 class ProgressManagerEpisode(ProgressManager):
-    def __init__(self, limit_episode, config):
-        super().__init__(config)
+    def __init__(self, limit_episode):
+        super().__init__()
         self.limit_episode = limit_episode
-        self.interval = self.limit_episode / self.config.coverage_frequency
+        self.interval = self.limit_episode / config.config.coverage_frequency
         self.last_coverage_calculation = 0
 
     def update(self):
@@ -69,9 +70,9 @@ class ProgressManagerEpisode(ProgressManager):
     def test_is_over(self):
         return self.episode >= self.limit_episode
 
-def create_progress_manager(limit_hour, limit_episode, config):
+def create_progress_manager(limit_hour, limit_episode):
     assert((limit_hour == None) ^ (limit_episode == None))  # ^ is XOR operator.
     if limit_hour != None:
-        return ProgressManagerHour(limit_hour, config)
+        return ProgressManagerHour(limit_hour)
     else:
-        return ProgressManagerEpisode(limit_episode, config)
+        return ProgressManagerEpisode(limit_episode)

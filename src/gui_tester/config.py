@@ -63,5 +63,9 @@ class Config():
         else:
             self.torch_device = "cpu"
 
-        global config
-        config = self
+def create(package, apk_path, model, off_reward_rising, off_per, off_unactionable_flooring):
+    global config
+    assert (config == None), "Config is singleton."
+
+    config = Config(package, apk_path, model, off_reward_rising, off_per, off_unactionable_flooring)
+    return config

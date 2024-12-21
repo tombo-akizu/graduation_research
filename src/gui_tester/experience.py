@@ -1,3 +1,4 @@
+import gui_tester.config as config  # type: ignore
 from gui_tester.path import Path                                # type: ignore
 from gui_tester.replay_buffer import ReplayBuffer, TrainData    # type: ignore
 from gui_tester.state import State                              # type: ignore
@@ -15,12 +16,11 @@ class ExperienceItem():
 # - Traning data created from experience:           replay_buffer
 # - How many times the same state repeats:          state_repeat_counter
 class Experience():
-    def __init__(self, config):
+    def __init__(self):
         # 2-dimentional list. Each item is list[ExperienceItem] of an episode.
         self.experience = []
         self.state_repeat_counter = 0
-        self.config = config
-        self.replay_buffer = ReplayBuffer(config)
+        self.replay_buffer = ReplayBuffer()
 
         self.current_path = Path()
 
@@ -41,7 +41,7 @@ class Experience():
         self.current_path.append_out_of_app()
 
     def state_repeats_too_much(self):
-        return self.state_repeat_counter > self.config.max_state_repeat
+        return self.state_repeat_counter > config.config.max_state_repeat
 
     def create_train_data(self, method_num, global_step, agent):
         assert len(self.experience[-1]) >= 2
@@ -57,7 +57,7 @@ class Experience():
                     experience_item.new_state, 
                     experience_item.path.clone()
                 )
-                if not self.config.off_per:
+                if not config.config.off_per:
                     data.set_priority(agent, self)
                 self.replay_buffer.push(data)
         else:
@@ -73,7 +73,7 @@ class Experience():
                             experience_item.new_state, 
                             experience_item.path.clone()
                             )
-                        if not self.config.off_per:
+                        if not config.config.off_per:
                             data.set_priority(agent, self)
                         self.replay_buffer.push(data)
     
@@ -93,13 +93,13 @@ class Experience():
             return 1 * self.__calc_reward_rising(global_step)
         if self.path_has_been_taken(method_id):
             return -0.001
-        return 0.01 * (self.config.discount_rate ** step_num) * self.__calc_reward_rising(global_step)
+        return 0.01 * (config.config.discount_rate ** step_num) * self.__calc_reward_rising(global_step)
         
     def __calc_reward_rising(self, global_step):
-        if self.config.off_reward_rising:
+        if config.config.off_reward_rising:
             return 1
         else:
-            return 1 + global_step * self.config.reward_rise_rate
+            return 1 + global_step * config.config.reward_rise_rate
         
     def path_has_been_taken(self, method_id):
         for episode in self.experience[:-1]:
