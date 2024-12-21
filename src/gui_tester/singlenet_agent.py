@@ -150,7 +150,7 @@ class SingleNetAgent(Agent):
             target_net_state_dict[key] = policy_net_state_dict[key] * config.config.soft_update_rate + target_net_state_dict[key] * (1 - config.config.soft_update_rate)
         self.target_dqn.load_state_dict(target_net_state_dict)
 
-    def calc_td_error(self, train_data: TrainData, experience):
+    def calc_td_error(self, train_data: TrainData):
         target_method_id_tensor = torch.tensor([train_data.target_method_id], dtype=torch.float32)
         state = torch.cat((target_method_id_tensor, train_data.state.get_tensor())).to(config.config.torch_device)
         new_state = torch.cat((target_method_id_tensor, train_data.new_state.get_tensor())).to(config.config.torch_device)

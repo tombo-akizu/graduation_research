@@ -58,7 +58,7 @@ class Experience():
                     experience_item.path.clone()
                 )
                 if not config.config.off_per:
-                    data.set_priority(agent, self)
+                    data.set_priority(agent)
                 self.replay_buffer.push(data)
         else:
             for i in range(method_num):
@@ -74,7 +74,7 @@ class Experience():
                             experience_item.path.clone()
                             )
                         if not config.config.off_per:
-                            data.set_priority(agent, self)
+                            data.set_priority(agent)
                         self.replay_buffer.push(data)
     
     def __step_num_to_call_method(self, departure, method_id):
@@ -115,7 +115,7 @@ class Experience():
         return self.current_path
     
     def reset_priority(self, agent):
-        self.replay_buffer.reset_priority(agent, self)
+        self.replay_buffer.reset_priority(agent)
 
     def sample_batch(self):
         return self.replay_buffer.sample()

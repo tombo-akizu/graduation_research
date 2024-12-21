@@ -17,8 +17,8 @@ class TrainData():
         self.path = path
         self.priority = 0
 
-    def set_priority(self, agent, experience):
-        self.priority = agent.calc_td_error(self, experience)
+    def set_priority(self, agent):
+        self.priority = agent.calc_td_error(self)
 
     def __eq__(self, other):
         if self.target_method_id != other.target_method_id: return False
@@ -65,9 +65,9 @@ class ReplayBuffer():
 
             return batch
         
-    def reset_priority(self, agent, experience):
+    def reset_priority(self, agent):
         for data in self.buffer:
-            data.set_priority(agent, experience)
+            data.set_priority(agent)
 
     def __get_priority_sum_and_roulette(self):
         epsilon = 0.001
