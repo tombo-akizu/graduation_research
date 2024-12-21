@@ -1,3 +1,4 @@
+from __future__ import annotations
 from collections import deque
 import random
 
@@ -15,7 +16,7 @@ class TrainData():
         self.reward = reward
         self.new_state = new_state
         self.path = path
-        self.priority = 0
+        self.priority = 0   # only priority is mutable
 
     def set_priority(self, agent):
         self.priority = agent.calc_td_error(self)
@@ -31,6 +32,33 @@ class TrainData():
 class ReplayBuffer():
     def __init__(self):
         self.buffer = deque([], maxlen=config.config.replay_ratio)
+
+    # Create TrainData and append it to self.buffer.
+    #  step_to_call_target == -1 means target method wasn't called.
+    def create_and_append_data(
+            self,
+            item: ExperienceItem,    # type: ignore
+            target_method_id: int, 
+            step_to_call_target: int, 
+            is_new_path: bool, 
+            reward_rising_rate: float,
+            agent: Agent            # type: ignore
+            ):
+        reward = self.__calc_reward(step_to_call_target, is_new_path, reward_rising_rate)
+        data = TrainData(target_method_id, item.state, item.action_idx, reward, item.new_state, item.path)
+        if not config.config.off_per:
+            data.set_priority(agent)
+        self.push(data)
+
+    def __calc_reward(self, step_to_call_target: int, is_new_path: bool, reward_rising_rate: float):
+        if step_to_call_target == -1:
+            return -0.001
+        elif not is_new_path:
+            return -0.001
+        elif step_to_call_target == 0:
+            return 1
+        else:
+            return 0.01 * (config.config.discount_rate ** step_to_call_target)
 
     def push(self, item: TrainData):
         if item in self.buffer:

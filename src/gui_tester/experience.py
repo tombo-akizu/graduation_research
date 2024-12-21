@@ -15,6 +15,7 @@ class ExperienceItem():
 # - Experience in reinforcement learning context:   experience
 # - Traning data created from experience:           replay_buffer
 # - How many times the same state repeats:          state_repeat_counter
+# - Path of current episode:                        current_path
 class Experience():
     def __init__(self):
         # 2-dimentional list. Each item is list[ExperienceItem] of an episode.
@@ -46,55 +47,31 @@ class Experience():
     def create_train_data(self, method_num, global_step, agent):
         assert len(self.experience[-1]) >= 2
         called_methods_bits = self.experience[-1][-1].called_methods
+        reward_rising_rate = self.__calc_reward_rising(global_step)
         if called_methods_bits == 0:
             for i in range(method_num):
-                experience_item = self.experience[-1][-1]
-                data = TrainData(
-                    i,
-                    experience_item.state, 
-                    experience_item.action_idx, 
-                    -0.001,
-                    experience_item.new_state, 
-                    experience_item.path.clone()
+                self.replay_buffer.create_and_append_data(
+                    item=self.experience[-1][-1],
+                    target_method_id=i, 
+                    step_to_call_target=-1, 
+                    is_new_path=None,    # Don't care because step_to_call_target == -1.
+                    reward_rising_rate=reward_rising_rate,
+                    agent=agent
                 )
-                if not config.config.off_per:
-                    data.set_priority(agent)
-                self.replay_buffer.push(data)
         else:
             for i in range(method_num):
                 if (called_methods_bits & (1 << i)) > 0:
+                    is_new_path = not self.path_has_been_taken(i)
                     for step_idx, experience_item in enumerate(self.experience[-1][1:], start=1):   # enumerate starts from 1 because self.experience[-1][0].state == None.
-                        step_num = self.__step_num_to_call_method(step_idx, i)
-                        data = TrainData(
-                            i, 
-                            experience_item.state, 
-                            experience_item.action_idx, 
-                            self.__calc_reward(step_num, i, global_step), 
-                            experience_item.new_state, 
-                            experience_item.path.clone()
-                            )
-                        if not config.config.off_per:
-                            data.set_priority(agent)
-                        self.replay_buffer.push(data)
+                        self.replay_buffer.create_and_append_data(
+                            item=experience_item,
+                            target_method_id=i, 
+                            step_to_call_target=(len(self.experience[-1]) - 1 - step_idx),
+                            is_new_path=is_new_path,
+                            reward_rising_rate=reward_rising_rate,
+                            agent=agent
+                        )
     
-    def __step_num_to_call_method(self, departure, method_id):
-        step_idx = departure
-        step_num = 0
-        method_bit = 1 << method_id
-        while (self.experience[-1][step_idx].called_methods & method_bit) == 0:
-            step_idx += 1
-            step_num += 1
-        return step_num
-    
-    def __calc_reward(self, step_num, method_id, global_step):
-        if step_num == 0:
-            if self.path_has_been_taken(method_id):
-                return -0.001
-            return 1 * self.__calc_reward_rising(global_step)
-        if self.path_has_been_taken(method_id):
-            return -0.001
-        return 0.01 * (config.config.discount_rate ** step_num) * self.__calc_reward_rising(global_step)
-        
     def __calc_reward_rising(self, global_step):
         if config.config.off_reward_rising:
             return 1
