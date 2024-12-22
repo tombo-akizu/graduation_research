@@ -3,12 +3,12 @@ import time
 from uiautomator2.exceptions import DeviceError, RPCUnknownError    # type: ignore
 
 from gui_tester.env.env import Environment              # type: ignore
-from gui_tester.experience import Experience            # type: ignore
 from gui_tester.multinet_agent import MultiNetAgent     # type: ignore
 from gui_tester.state import State                      # type: ignore
 import gui_tester.config                                # type: ignore
 import gui_tester.progress_manager as progress_manager  # type: ignore
 import gui_tester.agent                                 # type: ignore
+import gui_tester.experience                            # type: ignore
 import gui_tester.report as report                      # type: ignore
 import gui_tester.tcp_client as client                  # type: ignore
 import logger                                           # type: ignore
@@ -18,7 +18,7 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
     env = Environment(device_name)
     progress = progress_manager.create_progress_manager(limit_hour, limit_episode)
     agent = gui_tester.agent.create()
-    experience = Experience()
+    experience = gui_tester.experience.create_experience()
 
     global_step = 0
 
@@ -72,7 +72,11 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
         is_terminal = False
 
         while not is_terminal:
-            if isinstance(agent, MultiNetAgent): agent.switch_mode(step)
+            if isinstance(agent, MultiNetAgent):
+                if experience.is_to_switch(step):
+                    agent.switch_mode()
+                    experience.switch()
+
             if agent.is_to_select_action_greedily():
                 logger.logger.debug("[{}] Act greedy".format(step))
                 action = agent.select_action_greedily(current_screen_components, current_state, target_method_id, experience.get_current_path())
@@ -134,14 +138,23 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
 
             new_state = State(new_screen_components)
 
+            called_methods = client.get_method_bits()
+
+            # MultiNetExperience.check_target_is_called updates the internal state.
+            if isinstance(agent, MultiNetAgent):
+                experience.check_target_is_called(called_methods, target_method_id)
+                is_terminal = is_terminal or experience.is_episode_terminal()
+
             is_terminal = is_terminal or experience.state_repeats_too_much() or (step == config.max_ep_length)
             if experience.state_repeats_too_much():
                 logger.logger.warning("State repeats too much.")
             
-            called_methods = client.get_method_bits()
 
             experience.append(current_state, action.id, new_state, called_methods)
-            experience.create_train_data(config.method_num, global_step, agent)
+            if isinstance(agent, MultiNetAgent):
+                experience.create_train_data(target_method_id)
+            else:
+                experience.create_train_data(config.method_num, global_step, agent)
             agent.optimize_model(experience.sample_batch())
             agent.update_target_network()
             if not config.off_per:
@@ -172,6 +185,7 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
         env.reset()
         progress.update()
         _ = client.get_method_bits()    # Reset called_methods on server.
+        if isinstance(agent, MultiNetAgent): agent.reset_mode()
     
     report.output_report()
     env.merge_coverage()

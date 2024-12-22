@@ -49,6 +49,9 @@ class Path:
         for i, idx in enumerate(indices[:-2]):
             if self.path_list[idx:indices[i + 1]] == self.path_list[indices[-2]:indices[-1]]:
                 self.path_list = self.path_list[:(indices[-2] + 1)]
+
+    def get_path_sequence_tuple(self):
+        return tuple([state.id for state in self.path_list])
     
     def __eq__(self, other):
         if not isinstance(other, Path):

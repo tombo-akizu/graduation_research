@@ -18,6 +18,10 @@ class Config():
         self.epsilon_end = 0.5
         self.epsilon_episode_end = 50
 
+        self.explorer_terminal_epsilon_start = 1.0
+        self.explorer_terminal_epsilon_end = 0.0
+        self.explorer_terminal_episode_end = 50
+
         result = subprocess.run(['adb', 'shell', 'wm', 'size'], capture_output=True, text=True).stdout
         re_result = re.search(r'.*?(\d+)x(\d+).*?', result)
         self.emulator_screen_width = int(re_result.group(1))

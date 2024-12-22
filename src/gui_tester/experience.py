@@ -43,6 +43,7 @@ class Experience():
     def state_repeats_too_much(self):
         return self.state_repeat_counter > config.config.max_state_repeat
 
+    # If config.model == "Multi", this method is overriden by MultinetExperience.
     def create_train_data(self, method_num, global_step, agent):
         assert len(self.experience[-1]) >= 2
         called_methods_bits = self.experience[-1][-1].called_methods
@@ -95,3 +96,10 @@ class Experience():
 
     def sample_batch(self):
         return self.replay_buffer.sample()
+    
+def create_experience():
+    if config.config.model == "4LP" or config.config.model == "4LPWithPath" or config.config.model == "LSTM":
+        return Experience()
+    else:
+        from gui_tester.multinet_experience import MultiNetExperience   # type: ignore
+        return MultiNetExperience()

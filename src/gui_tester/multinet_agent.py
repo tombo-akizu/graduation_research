@@ -43,11 +43,12 @@ class MultiNetAgent(Agent):
 
         self.mode = MultiNetAgent.MODE_EXPLORER
 
-    def switch_mode(self, step_num):
-        if step_num < config.config.explore_step_num:
-            self.mode = MultiNetAgent.MODE_EXPLORER
-        else:
-            self.mode = MultiNetAgent.MODE_CALLER
+    def reset_mode(self):
+        self.mode = MultiNetAgent.MODE_EXPLORER
+
+    def switch_mode(self):
+        logger.logger.info("mode switched")
+        self.mode = MultiNetAgent.MODE_CALLER
 
     def is_to_select_action_greedily(self):
         if self.mode == MultiNetAgent.MODE_EXPLORER:
@@ -97,10 +98,11 @@ class MultiNetAgent(Agent):
             return
         
         # Start processing input tensors for DQN...
-        state_batch         = torch.stack([data.state.get_tensor() for data in batch]       ).to(config.config.torch_device)
-        new_state_batch     = torch.stack([data.new_state.get_tensor() for data in batch]   ).to(config.config.torch_device)
-        action_idx_batch    = torch.tensor([data.action_idx for data in batch]  , dtype=torch.int64     ).to(config.config.torch_device)
-        reward_batch        = torch.tensor([data.reward for data in batch]      , dtype=torch.float32   ).to(config.config.torch_device)
+        state_batch             = torch.stack([data.state.get_tensor() for data in batch]       ).to(config.config.torch_device)
+        new_state_batch         = torch.stack([data.new_state.get_tensor() for data in batch]   ).to(config.config.torch_device)
+        action_idx_batch        = torch.tensor([data.action_idx for data in batch]  , dtype=torch.int64     ).to(config.config.torch_device)
+        explorer_reward_batch   = torch.tensor([data.explorer_reward    for data in batch], dtype=torch.float32 ).to(config.config.torch_device)
+        caller_reward_batch     = torch.tensor([data.caller_reward      for data in batch], dtype=torch.float32 ).to(config.config.torch_device)
 
         path_list = [data.path.get_path_sequence_tensor() for data in batch]
         new_path_list = [data.path.clone().append(data.new_state).get_path_sequence_tensor() for data in batch]
@@ -114,8 +116,8 @@ class MultiNetAgent(Agent):
         # ...End processing input tensors for DQN.
 
         # Optimize each model.
-        self.loss   = self.__optimize_each_mode_model(MultiNetAgent.MODE_EXPLORER, state_batch, new_state_batch, action_idx_batch, reward_batch, path_batch, new_path_batch)
-        _           = self.__optimize_each_mode_model(MultiNetAgent.MODE_CALLER, state_batch, new_state_batch, action_idx_batch, reward_batch, path_batch, new_path_batch)
+        self.loss   = self.__optimize_each_mode_model(MultiNetAgent.MODE_EXPLORER, state_batch, new_state_batch, action_idx_batch, explorer_reward_batch, path_batch, new_path_batch)
+        _           = self.__optimize_each_mode_model(MultiNetAgent.MODE_CALLER, state_batch, new_state_batch, action_idx_batch, caller_reward_batch, path_batch, new_path_batch)
 
     def __optimize_each_mode_model(self, mode, state_batch, new_state_batch, action_idx_batch, reward_batch, path_batch, new_path_batch):
         if mode == MultiNetAgent.MODE_EXPLORER:
@@ -146,6 +148,9 @@ class MultiNetAgent(Agent):
             selected_action_indices = target_q.gather(dim=1, index=argmax_action.unsqueeze(1)).squeeze()
 
         expected_state_action_values = reward_batch + config.config.discount_rate * selected_action_indices
+
+        if state_action_values.dim() == 0:
+            state_action_values = state_action_values.unsqueeze(0)
 
         # Compute loss
         loss = self.criterion(state_action_values, expected_state_action_values)

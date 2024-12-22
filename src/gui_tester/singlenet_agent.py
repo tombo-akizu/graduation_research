@@ -39,7 +39,7 @@ class SingleNetAgent(Agent):
         else:
             self.criterion = nn.MSELoss(reduction="none").to(config.config.torch_device)
 
-    def is_to_select_action_greedy(self):
+    def is_to_select_action_greedily(self):
         return random.random() >= self.epsilon
 
     def select_action_greedily(self, components, state, target_mathod_id, current_path):
