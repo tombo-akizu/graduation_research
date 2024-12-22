@@ -19,12 +19,13 @@ class Agent():
         return random.choice(components)
 
     def get_loss(self):
+        # loss will be updated by SingleNetAgent.optimize_model or MultiNetAgent.optimize_model.
         return self.loss
     
 # Factory function to create appropriate child-class instance.
 def create():
     if config.config.model == "4LP" or config.config.model == "4LPWithPath" or config.config.model == "LSTM":
-        # Import lately to avoid circular import error...
+        # Import late to avoid circular import error...
         import gui_tester.singlenet_agent as singlenet_agent    # type: ignore
         return singlenet_agent.SingleNetAgent()
     elif config.config.model == "Multi":

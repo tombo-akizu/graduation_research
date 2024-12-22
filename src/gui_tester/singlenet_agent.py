@@ -39,17 +39,22 @@ class SingleNetAgent(Agent):
         else:
             self.criterion = nn.MSELoss(reduction="none").to(config.config.torch_device)
 
-    def select_action_greedily(self, components, state, target_mathod_id, experience):
+    def is_to_select_action_greedy(self):
+        return random.random() >= self.epsilon
+
+    def select_action_greedily(self, components, state, target_mathod_id, current_path):
+        # Start processing input tensors for DQN...
         target_mathod_id_tensor = torch.tensor([target_mathod_id], dtype=torch.float32)
         input = torch.cat((target_mathod_id_tensor, state.get_tensor())).to(config.config.torch_device)
 
         if config.config.model == "4LP" or config.config.model == "4LPWithPath":
-            path_tensor = experience.get_current_path().get_tensor().to(config.config.torch_device)
+            path_tensor = current_path.get_tensor().to(config.config.torch_device)
         elif config.config.model == "LSTM":
-            path_tensor = experience.get_current_path().get_path_sequence_tensor().to(config.config.torch_device)
+            path_tensor = current_path.get_path_sequence_tensor().to(config.config.torch_device)
         
         input = torch.unsqueeze(input, dim=0)   # forward of LSTM requires 3-dim tensor...
         path_tensor = torch.unsqueeze(path_tensor, dim=0)
+        # ...End processing input tensors for DQN.
 
         with torch.no_grad():
             q = self.policy_dqn(input, path_tensor)
@@ -74,6 +79,7 @@ class SingleNetAgent(Agent):
             logger.logger.info("empty batch")
             return
         
+        # Start processing input tensors for DQN...
         action_idx_batch    = torch.tensor([data.action_idx for data in batch]  , dtype=torch.int64     ).to(config.config.torch_device)
         reward_batch        = torch.tensor([data.reward for data in batch]      , dtype=torch.float32   ).to(config.config.torch_device)
         priority_batch      = torch.tensor([data.priority for data in batch]    , dtype=torch.float32   ).to(config.config.torch_device)
@@ -106,6 +112,7 @@ class SingleNetAgent(Agent):
             new_path_batch = rnn.pack_padded_sequence(new_path_batch, new_path_lengths.cpu(), batch_first=True, enforce_sorted=False)
         else:
             assert False
+        # ...End processing input tensors for DQN.
 
         state_action_values = self.policy_dqn(state_batch, path_batch).gather(dim=1, index=action_idx_batch.unsqueeze(1)).squeeze()
 
@@ -151,6 +158,7 @@ class SingleNetAgent(Agent):
         self.target_dqn.load_state_dict(target_net_state_dict)
 
     def calc_td_error(self, train_data: TrainData):
+        # Start processing input tensors for DQN...
         target_method_id_tensor = torch.tensor([train_data.target_method_id], dtype=torch.float32)
         state = torch.cat((target_method_id_tensor, train_data.state.get_tensor())).to(config.config.torch_device)
         new_state = torch.cat((target_method_id_tensor, train_data.new_state.get_tensor())).to(config.config.torch_device)
@@ -170,6 +178,7 @@ class SingleNetAgent(Agent):
         new_state = torch.unsqueeze(new_state, dim=0)
         path_tensor = torch.unsqueeze(path_tensor, dim=0)
         new_path_tensor = torch.unsqueeze(new_path_tensor, dim=0)
+        # ...End processing input tensors for DQN.
 
         with torch.no_grad():
             target_q = self.target_dqn(new_state, new_path_tensor)

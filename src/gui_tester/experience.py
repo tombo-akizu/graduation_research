@@ -1,7 +1,7 @@
+from gui_tester.path import Path                    # type: ignore
+from gui_tester.replay_buffer import ReplayBuffer   # type: ignore
+from gui_tester.state import State                  # type: ignore
 import gui_tester.config as config  # type: ignore
-from gui_tester.path import Path                                # type: ignore
-from gui_tester.replay_buffer import ReplayBuffer, TrainData    # type: ignore
-from gui_tester.state import State                              # type: ignore
 
 class ExperienceItem():
     def __init__(self, state: State, action_idx: int, new_state: State, called_methods: int, path: Path):
@@ -20,9 +20,8 @@ class Experience():
     def __init__(self):
         # 2-dimentional list. Each item is list[ExperienceItem] of an episode.
         self.experience = []
-        self.state_repeat_counter = 0
         self.replay_buffer = ReplayBuffer()
-
+        self.state_repeat_counter = 0
         self.current_path = Path()
 
     def start_new_episode(self):

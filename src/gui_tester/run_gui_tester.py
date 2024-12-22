@@ -1,10 +1,10 @@
-import random
 import time
 
 from uiautomator2.exceptions import DeviceError, RPCUnknownError    # type: ignore
 
 from gui_tester.env.env import Environment              # type: ignore
 from gui_tester.experience import Experience            # type: ignore
+from gui_tester.multinet_agent import MultiNetAgent     # type: ignore
 from gui_tester.state import State                      # type: ignore
 import gui_tester.config                                # type: ignore
 import gui_tester.progress_manager as progress_manager  # type: ignore
@@ -72,13 +72,13 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
         is_terminal = False
 
         while not is_terminal:
-            action = None
-            if random.random() < agent.epsilon:
+            if isinstance(agent, MultiNetAgent): agent.switch_mode(step)
+            if agent.is_to_select_action_greedily():
+                logger.logger.debug("[{}] Act greedy".format(step))
+                action = agent.select_action_greedily(current_screen_components, current_state, target_method_id, experience.get_current_path())
+            else:
                 logger.logger.debug("[{}] Act random".format(step))
                 action = agent.select_action_randomly(current_screen_components)
-            else:
-                logger.logger.debug("[{}] Act greedy".format(step))
-                action = agent.select_action_greedily(current_screen_components, current_state, target_method_id, experience)
 
             try:
                 env.perform_action(action)

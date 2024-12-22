@@ -16,7 +16,7 @@ class TrainData():
         self.reward = reward
         self.new_state = new_state
         self.path = path
-        self.priority = 0   # only priority is mutable
+        self.priority = 0   # Only priority is mutable.
 
     def set_priority(self, agent):
         self.priority = agent.calc_td_error(self)
@@ -31,6 +31,7 @@ class TrainData():
 
 class ReplayBuffer():
     def __init__(self):
+        # Deque of TrainData.
         self.buffer = deque([], maxlen=config.config.replay_ratio)
 
     # Create TrainData and append it to self.buffer.
@@ -48,19 +49,20 @@ class ReplayBuffer():
         data = TrainData(target_method_id, item.state, item.action_idx, reward, item.new_state, item.path)
         if not config.config.off_per:
             data.set_priority(agent)
-        self.push(data)
+        self.__push(data)
 
     def __calc_reward(self, step_to_call_target: int, is_new_path: bool, reward_rising_rate: float):
+        # step_to_call_target == -1 means target method wasn't called.
         if step_to_call_target == -1:
             return -0.001
         elif not is_new_path:
             return -0.001
         elif step_to_call_target == 0:
-            return 1
+            return 1 * reward_rising_rate
         else:
-            return 0.01 * (config.config.discount_rate ** step_to_call_target)
+            return 0.01 * (config.config.discount_rate ** step_to_call_target) * reward_rising_rate
 
-    def push(self, item: TrainData):
+    def __push(self, item: TrainData):
         if item in self.buffer:
             self.buffer.remove(item)
         self.buffer.append(item)    # If the deque overflows, the first item is removed.
