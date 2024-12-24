@@ -9,7 +9,7 @@ class Explorer(nn.Module):
     def __init__(self):
         super(Explorer, self).__init__()
 
-        layer_size = config.config.state_size + config.config.state_size
+        layer_size = config.config.state_size + 1 + config.config.state_size
 
         self.lstm = nn.LSTM(config.config.state_size, config.config.state_size, num_layers=2, batch_first=True)
 
@@ -21,7 +21,7 @@ class Explorer(nn.Module):
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
-    def forward(self, state, path):
+    def forward(self, state, path, target):
         out, h = self.lstm(path)
 
         if not isinstance(out, torch.Tensor):
@@ -30,7 +30,7 @@ class Explorer(nn.Module):
         # dim=-1 merges tensor with last dimention.
         #   If called from select_action_greedily, merge tensor with dim=0.
         #   If called from optimize_model, merge tensor with dim=1.
-        x = torch.cat((state, out[:, -1, :]), dim=-1)
+        x = torch.cat((target, state, out[:, -1, :]), dim=-1)
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         return self.layer3(x)

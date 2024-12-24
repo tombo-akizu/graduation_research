@@ -16,14 +16,6 @@ class TrainData():
         self.new_state = new_state
         self.path = path
 
-    # def __eq__(self, other):
-    #     if self.target_method_id != other.target_method_id: return False
-    #     if self.state != other.state: return False
-    #     if self.action_idx != other.action_idx: return False
-    #     if self.new_state != other.new_state: return False
-    #     if self.path != other.path: return False
-    #     return True
-
 class ReplayBuffer():
     def __init__(self):
         # Deque of TrainData.
@@ -33,33 +25,42 @@ class ReplayBuffer():
     #  step_to_call_target == -1 means target method wasn't called.
     def create_and_append_data(
             self,
-            item: ExperienceItem,    # type: ignore
+            item: ExperienceItem,
             target_method_id: int, 
             step_to_call_target: int, 
-            terminal_path_dict
+            is_new_path: bool,
+            step_to_call_global_target: int
             ):
-        explorer_reward = self.__calc_explorer_reward(item.path, terminal_path_dict)
-        caller_reward = self.__calc_caller_reward(step_to_call_target)
+        explorer_reward = self.__calc_explorer_reward(step_to_call_target, is_new_path)
+        caller_reward = self.__calc_caller_reward(step_to_call_global_target, item)
         data = TrainData(target_method_id, item.state, item.action_idx, explorer_reward, caller_reward, item.new_state, item.path)
         self.__push(data)
         
-    def __calc_explorer_reward(self, path, terminal_path_dict):
-        count = terminal_path_dict.get(path.get_path_sequence_tuple(), 0)
-        if count == 0:
-            return 1
-        elif count <= 2:
-            return 0.1
-        else:
-            return -0.1
-        
-    def __calc_caller_reward(self, step_to_call_target):
+    def __calc_explorer_reward(self, step_to_call_target: int, is_new_path: bool):
         # step_to_call_target == -1 means target method wasn't called.
         if step_to_call_target == -1:
+            return -0.001
+        elif not is_new_path:
             return -0.001
         elif step_to_call_target == 0:
             return 1
         else:
             return 0.01 * (config.config.discount_rate ** step_to_call_target)
+        
+    def __calc_caller_reward(self, step_to_call_global_target, item: ExperienceItem):
+        # step_to_call_target == -1 means target method wasn't called.
+        if step_to_call_global_target == 0:
+            return 1
+        elif item.state == item.new_state:
+            return -1
+        elif step_to_call_global_target == -1:
+            return -0.001
+        else:
+            return 0.01 * (config.config.discount_rate ** step_to_call_global_target)
+
+    def create_and_append_keep_out_data(self, target_method_id, state, action_idx, path):
+        data = TrainData(target_method_id, state, action_idx, -1, -1, state, path)
+        self.__push(data)
 
     def __push(self, item: TrainData):
         self.buffer.append(item)    # If the deque overflows, the first item is removed.

@@ -58,13 +58,15 @@ class MultiNetAgent(Agent):
         else:
             assert False, "Invalid mode"
 
-    def select_action_greedily(self, components, state, _target_mathod_id, current_path):
+    def select_action_greedily(self, components, state, target_method_id, current_path):
         # Start processing input tensors for DQN...
         state_tensor = state.get_tensor().to(config.config.torch_device)
         path_tensor = current_path.get_path_sequence_tensor().to(config.config.torch_device)
+        target_tensor = torch.tensor([target_method_id]).to(config.config.torch_device)
         
         state_tensor = torch.unsqueeze(state_tensor, dim=0)   # forward of LSTM requires 3-dim tensor...
         path_tensor = torch.unsqueeze(path_tensor, dim=0)
+        target_tensor = torch.unsqueeze(target_tensor, dim=0)
         # ...End processing input tensors for DQN.
 
         if self.mode == MultiNetAgent.MODE_EXPLORER:
@@ -75,7 +77,7 @@ class MultiNetAgent(Agent):
             assert False
 
         with torch.no_grad():
-            q = policy_dqn(state_tensor, path_tensor)
+            q = policy_dqn(state_tensor, path_tensor, target_tensor)
 
         q = torch.squeeze(q, dim=0)
 
@@ -103,6 +105,9 @@ class MultiNetAgent(Agent):
         action_idx_batch        = torch.tensor([data.action_idx for data in batch]  , dtype=torch.int64     ).to(config.config.torch_device)
         explorer_reward_batch   = torch.tensor([data.explorer_reward    for data in batch], dtype=torch.float32 ).to(config.config.torch_device)
         caller_reward_batch     = torch.tensor([data.caller_reward      for data in batch], dtype=torch.float32 ).to(config.config.torch_device)
+        target_batch            = torch.tensor([data.target_method_id   for data in batch], dtype=torch.float32 ).to(config.config.torch_device)
+
+        target_batch = torch.unsqueeze(target_batch, dim=1)
 
         path_list = [data.path.get_path_sequence_tensor() for data in batch]
         new_path_list = [data.path.clone().append(data.new_state).get_path_sequence_tensor() for data in batch]
@@ -116,10 +121,10 @@ class MultiNetAgent(Agent):
         # ...End processing input tensors for DQN.
 
         # Optimize each model.
-        self.loss   = self.__optimize_each_mode_model(MultiNetAgent.MODE_EXPLORER, state_batch, new_state_batch, action_idx_batch, explorer_reward_batch, path_batch, new_path_batch)
-        _           = self.__optimize_each_mode_model(MultiNetAgent.MODE_CALLER, state_batch, new_state_batch, action_idx_batch, caller_reward_batch, path_batch, new_path_batch)
+        self.loss   = self.__optimize_each_mode_model(MultiNetAgent.MODE_EXPLORER, state_batch, new_state_batch, action_idx_batch, explorer_reward_batch, path_batch, new_path_batch, target_batch)
+        _           = self.__optimize_each_mode_model(MultiNetAgent.MODE_CALLER, state_batch, new_state_batch, action_idx_batch, caller_reward_batch, path_batch, new_path_batch, target_batch)
 
-    def __optimize_each_mode_model(self, mode, state_batch, new_state_batch, action_idx_batch, reward_batch, path_batch, new_path_batch):
+    def __optimize_each_mode_model(self, mode, state_batch, new_state_batch, action_idx_batch, reward_batch, path_batch, new_path_batch, target_batch):
         if mode == MultiNetAgent.MODE_EXPLORER:
             policy_dqn = self.explorer_policy_dqn
             target_dqn = self.explorer_target_dqn
@@ -131,14 +136,14 @@ class MultiNetAgent(Agent):
         else:
             assert False
 
-        state_action_values = policy_dqn(state_batch, path_batch).gather(dim=1, index=action_idx_batch.unsqueeze(1)).squeeze()
+        state_action_values = policy_dqn(state_batch, path_batch, target_batch).gather(dim=1, index=action_idx_batch.unsqueeze(1)).squeeze()
 
         # Compute argmax_a Q(s_t+1, a).
-        argmax_action = torch.argmax(policy_dqn(new_state_batch, new_path_batch), dim=-1)
+        argmax_action = torch.argmax(policy_dqn(new_state_batch, new_path_batch, target_batch), dim=-1)
 
         # Collect Q'(s_t+1, argmax_a Q(s_t+1, a))
         with torch.no_grad():
-            target_q = target_dqn(new_state_batch, new_path_batch)
+            target_q = target_dqn(new_state_batch, new_path_batch, target_batch)
             if not config.config.off_unactionable_flooring:
                 for i, new_state_t in enumerate(new_state_batch):
                     mask = torch.ones(config.config.state_size, dtype=torch.bool).to(config.config.torch_device)

@@ -16,11 +16,12 @@ class Config():
 
         self.epsilon_start = 1.0
         self.epsilon_end = 0.5
-        self.epsilon_episode_end = 50
+        self.epsilon_episode_start = 0
+        self.epsilon_episode_end = 200
 
         self.explorer_terminal_epsilon_start = 1.0
         self.explorer_terminal_epsilon_end = 0.0
-        self.explorer_terminal_episode_end = 50
+        self.explorer_terminal_episode_end = 200
 
         result = subprocess.run(['adb', 'shell', 'wm', 'size'], capture_output=True, text=True).stdout
         re_result = re.search(r'.*?(\d+)x(\d+).*?', result)
@@ -37,7 +38,7 @@ class Config():
         self.coverage_frequency = 100
 
         # Length of replay buffer.
-        self.replay_ratio = 10000
+        self.replay_ratio = 1000
 
         self.discount_rate = 0.5
         self.soft_update_rate = 0.005   # tau
@@ -45,7 +46,7 @@ class Config():
         self.max_action_num = 500
         self.learning_rate = 0.00025
 
-        self.batch_size = 32
+        self.batch_size = 128
 
         self.max_try_time_to_empty_screen = 10
 

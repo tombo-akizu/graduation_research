@@ -27,13 +27,12 @@ class MultiNetExperience(Experience):
         super().start_new_episode()
         self.is_caller_mode = False
         self.target_method_is_called = False
-        self.explore_terminal_epsilon = max(self.explore_terminal_epsilon - self.epsilon_step, config.config.explorer_terminal_episode_end)
+        self.explore_terminal_epsilon = max(self.explore_terminal_epsilon - self.epsilon_step, config.config.explorer_terminal_epsilon_end)
 
     def is_to_switch(self, step_num):
         if self.is_caller_mode: return False
-        if self.current_path == None: return False
         if step_num >= config.config.explore_step_num: return True
-        if self.terminal_path_dict.get(self.current_path.get_path_sequence_tuple(), 0) > 3: return False
+        if self.terminal_path_dict.get(self.current_path.get_path_sequence_tuple(), 0) > 0: return False
         return random.random() >= self.explore_terminal_epsilon
 
     def switch(self):
@@ -57,22 +56,31 @@ class MultiNetExperience(Experience):
         assert len(self.experience[-1]) >= 2
         called_methods_bits = self.experience[-1][-1].called_methods
 
-        if (called_methods_bits & (1 << target_method_id)) > 0:
-            for step_idx, experience_item in enumerate(self.experience[-1][1:], start=1):   # enumerate starts from 1 because self.experience[-1][0].state == None.
+        if called_methods_bits == 0:
+            for i in range(config.config.method_num):
                 self.replay_buffer.create_and_append_data(
-                    item=experience_item,
-                    target_method_id=target_method_id,
-                    step_to_call_target=self.__step_num_to_call_method(step_idx, target_method_id),
-                    terminal_path_dict=self.terminal_path_dict
+                    item=self.experience[-1][-1],
+                    target_method_id=i, 
+                    step_to_call_target=-1, 
+                    is_new_path=None,    # Don't care because step_to_call_target == -1.
+                    step_to_call_global_target=-1
                 )
         else:
-            for experience_item in self.experience[-1][1:]:
-                self.replay_buffer.create_and_append_data(
-                    item=experience_item,
-                    target_method_id=target_method_id,
-                    step_to_call_target=-1,
-                    terminal_path_dict=self.terminal_path_dict
-                )
+            for i in range(config.config.method_num):
+                if (called_methods_bits & (1 << i)) > 0:
+                    is_new_path = not self.path_has_been_taken(i)
+                    for step_idx, experience_item in enumerate(self.experience[-1][1:], start=1):   # enumerate starts from 1 because self.experience[-1][0].state == None.
+                        self.replay_buffer.create_and_append_data(
+                            item=experience_item,
+                            target_method_id=i, 
+                            step_to_call_target=(len(self.experience[-1]) - 1 - step_idx),
+                            is_new_path=is_new_path,
+                            step_to_call_global_target=self.__step_num_to_call_method(step_idx, target_method_id)
+                        )
+
+    def create_keep_out_train_data(self, target_method_id):
+        item = self.experience[-1][-1]
+        self.replay_buffer.create_and_append_keep_out_data(target_method_id, item.state, item.action_idx, self.current_path.clone())
 
     def __step_num_to_call_method(self, departure, method_id):
         step_idx = departure
@@ -81,4 +89,6 @@ class MultiNetExperience(Experience):
         while (self.experience[-1][step_idx].called_methods & method_bit) == 0:
             step_idx += 1
             step_num += 1
+            if step_idx == len(self.experience[-1]):
+                return -1
         return step_num

@@ -152,7 +152,10 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
 
             experience.append(current_state, action.id, new_state, called_methods)
             if isinstance(agent, MultiNetAgent):
-                experience.create_train_data(target_method_id)
+                if new_screen_status == "Out of App" and ((called_methods & (1 << target_method_id)) == 0):
+                    experience.create_keep_out_train_data(target_method_id)
+                else:
+                    experience.create_train_data(target_method_id)
             else:
                 experience.create_train_data(config.method_num, global_step, agent)
             agent.optimize_model(experience.sample_batch())
