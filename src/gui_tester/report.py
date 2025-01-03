@@ -60,20 +60,49 @@ def output_report():
                     str(report_item.target_is_called),
                     str(report_item.path)
                     ])
-                
-    losses = []
-    for episode in report_item_log:
-        for step in episode:
-            losses.append(step.loss)
-    x = range(len(losses))
+    
+    if isinstance(report_item_log[0][0].loss, float):
+        losses = []
+        for episode in report_item_log:
+            for step in episode:
+                losses.append(step.loss)
+        x = range(len(losses))
 
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    ax.plot(x, losses, "-", linewidth=1, alpha=1)
-    ax.set_xlabel('Step')
-    ax.set_ylabel('Loss')
-    ax.set_ylim(0, 1)
-    fig.savefig("result/loss.png")
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(x, losses, "-", linewidth=1, alpha=1)
+        ax.set_xlabel('Step')
+        ax.set_ylabel('Loss')
+        ax.set_ylim(0, 1)
+        fig.savefig("result/loss.png")
+    else:
+        explorer_losses = []
+        caller_losses = []
+        for episode in report_item_log:
+            for step in episode:
+                if step.loss == None:
+                    explorer_losses.append(None)
+                    caller_losses.append(None)
+                else:
+                    explorer_losses.append(step.loss[0])
+                    caller_losses.append(step.loss[1])
+        x = range(len(explorer_losses))
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(x, explorer_losses, "-", linewidth=1, alpha=1)
+        ax.set_xlabel('Step')
+        ax.set_ylabel('Loss')
+        ax.set_ylim(0, 1)
+        fig.savefig("result/explorer_loss.png")
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(x, caller_losses, "-", linewidth=1, alpha=1)
+        ax.set_xlabel('Step')
+        ax.set_ylabel('Loss')
+        ax.set_ylim(0, 1)
+        fig.savefig("result/caller_loss.png")
 
     steps = []
     for item in report_path_log:

@@ -43,6 +43,8 @@ class MultiNetAgent(Agent):
 
         self.mode = MultiNetAgent.MODE_EXPLORER
 
+        self.loss = (0, 0)  # Ugly code...
+
     def reset_mode(self):
         self.mode = MultiNetAgent.MODE_EXPLORER
 
@@ -94,35 +96,55 @@ class MultiNetAgent(Agent):
         components_with_max_q_value = [component for component in components if component.id == max_index]
         return random.choice(components_with_max_q_value)
         
-    def optimize_model(self, batch):
-        if len(batch) == 0:
-            logger.logger.info("empty batch")
-            return
-        
-        # Start processing input tensors for DQN...
-        state_batch             = torch.stack([data.state.get_tensor() for data in batch]       ).to(config.config.torch_device)
-        new_state_batch         = torch.stack([data.new_state.get_tensor() for data in batch]   ).to(config.config.torch_device)
-        action_idx_batch        = torch.tensor([data.action_idx for data in batch]  , dtype=torch.int64     ).to(config.config.torch_device)
-        explorer_reward_batch   = torch.tensor([data.explorer_reward    for data in batch], dtype=torch.float32 ).to(config.config.torch_device)
-        caller_reward_batch     = torch.tensor([data.caller_reward      for data in batch], dtype=torch.float32 ).to(config.config.torch_device)
-        target_batch            = torch.tensor([data.target_method_id   for data in batch], dtype=torch.float32 ).to(config.config.torch_device)
+    def optimize_model(self, batches):
+        modes = (MultiNetAgent.MODE_EXPLORER, MultiNetAgent.MODE_CALLER)
+        loss = [0, 0]
 
-        target_batch = torch.unsqueeze(target_batch, dim=1)
+        for i in range(2):
+            batch = batches[i]
+            mode = modes[i]
+            if len(batch) == 0:
+                logger.logger.info("empty batch")
+                return
+            
+            if mode == MultiNetAgent.MODE_EXPLORER:
+                # Start processing input tensors for DQN...
+                state_batch         = torch.stack([data.state.get_tensor() for data in batch]       ).to(config.config.torch_device)
+                new_state_batch     = torch.stack([data.new_state.get_tensor() for data in batch]   ).to(config.config.torch_device)
+                action_idx_batch    = torch.tensor([data.action_idx for data in batch]  , dtype=torch.int64     ).to(config.config.torch_device)
+                reward_batch        = torch.tensor([data.reward             for data in batch], dtype=torch.float32 ).to(config.config.torch_device)
+                target_batch        = torch.tensor([data.target_method_id   for data in batch], dtype=torch.float32 ).to(config.config.torch_device)
 
-        path_list = [data.path.get_path_sequence_tensor() for data in batch]
-        new_path_list = [data.path.clone().append(data.new_state).get_path_sequence_tensor() for data in batch]
-        path_batch = rnn.pad_sequence(path_list, batch_first=True, padding_value=-2).to(config.config.torch_device)
-        new_path_batch = rnn.pad_sequence(new_path_list, batch_first=True, padding_value=-2).to(config.config.torch_device)
-        path_lengths = (path_batch != -2).any(dim=2).sum(dim=1)
-        new_path_lengths = (new_path_batch != -2).any(dim=2).sum(dim=1)
+                target_batch = torch.unsqueeze(target_batch, dim=1)
 
-        path_batch = rnn.pack_padded_sequence(path_batch, path_lengths.cpu(), batch_first=True, enforce_sorted=False)
-        new_path_batch = rnn.pack_padded_sequence(new_path_batch, new_path_lengths.cpu(), batch_first=True, enforce_sorted=False)
-        # ...End processing input tensors for DQN.
+                path_list = [data.path.get_path_sequence_tensor() for data in batch]
+                new_path_list = [data.path.clone().append(data.new_state).get_path_sequence_tensor() for data in batch]
+                path_batch = rnn.pad_sequence(path_list, batch_first=True, padding_value=-2).to(config.config.torch_device)
+                new_path_batch = rnn.pad_sequence(new_path_list, batch_first=True, padding_value=-2).to(config.config.torch_device)
+                path_lengths = (path_batch != -2).any(dim=2).sum(dim=1)
+                new_path_lengths = (new_path_batch != -2).any(dim=2).sum(dim=1)
 
-        # Optimize each model.
-        self.loss   = self.__optimize_each_mode_model(MultiNetAgent.MODE_EXPLORER, state_batch, new_state_batch, action_idx_batch, explorer_reward_batch, path_batch, new_path_batch, target_batch)
-        _           = self.__optimize_each_mode_model(MultiNetAgent.MODE_CALLER, state_batch, new_state_batch, action_idx_batch, caller_reward_batch, path_batch, new_path_batch, target_batch)
+                path_batch = rnn.pack_padded_sequence(path_batch, path_lengths.cpu(), batch_first=True, enforce_sorted=False)
+                new_path_batch = rnn.pack_padded_sequence(new_path_batch, new_path_lengths.cpu(), batch_first=True, enforce_sorted=False)
+                # ...End processing input tensors for DQN.
+
+            elif mode == MultiNetAgent.MODE_CALLER:
+                # Start processing input tensors for DQN...
+                state_batch         = torch.stack([data.state.get_tensor() for data in batch]       ).to(config.config.torch_device)
+                new_state_batch     = torch.stack([data.new_state.get_tensor() for data in batch]   ).to(config.config.torch_device)
+                action_idx_batch    = torch.tensor([data.action_idx for data in batch]  , dtype=torch.int64     ).to(config.config.torch_device)
+                reward_batch        = torch.tensor([data.reward             for data in batch], dtype=torch.float32 ).to(config.config.torch_device)
+                target_batch        = None
+                path_batch          = None
+                new_path_batch      = None
+                # ...End processing input tensors for DQN.
+
+
+            # Optimize correspond model
+            loss[i] = self.__optimize_each_mode_model(mode, state_batch, new_state_batch, action_idx_batch, reward_batch, path_batch, new_path_batch, target_batch)
+
+        self.loss = tuple(loss)
+        assert self.loss != None
 
     def __optimize_each_mode_model(self, mode, state_batch, new_state_batch, action_idx_batch, reward_batch, path_batch, new_path_batch, target_batch):
         if mode == MultiNetAgent.MODE_EXPLORER:
@@ -189,3 +211,7 @@ class MultiNetAgent(Agent):
         for key in policy_net_state_dict:
             target_net_state_dict[key] = policy_net_state_dict[key] * config.config.soft_update_rate + target_net_state_dict[key] * (1 - config.config.soft_update_rate)
         target_dqn.load_state_dict(target_net_state_dict)
+
+    # Override
+    def get_loss(self):
+        return self.loss
