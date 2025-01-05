@@ -61,7 +61,7 @@ class CallerReplayBuffer():
             return 0.01 * (config.config.discount_rate ** step_to_call_global_target)
 
     def create_and_append_keep_out_data(self, target_method_id, state, action_idx):
-        data = TrainData(target_method_id, state, action_idx, -1, state)
+        data = TrainData(state, action_idx, -1, state)
         self.__push(data)
 
     def __push(self, item: TrainData):
