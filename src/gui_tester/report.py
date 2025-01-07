@@ -1,9 +1,12 @@
 import csv
+import subprocess
+import threading
 
 from matplotlib import pyplot as plt
 
 from gui_tester.path import Path    # type: ignore
 import logger                       # type: ignore
+import gui_tester.config as config  # type: ignore
 
 class ReportItem():
     def __init__(self, action, new_state, loss, target_is_called, new_state_status, path):
@@ -21,6 +24,24 @@ class NewPathData():
 
 report_item_log = []
 report_path_log = []
+
+def start_logging():
+    subprocess.run(["adb", "logcat", "-c"])
+    log_thread = threading.Thread(target=log, daemon=True)
+    log_thread.start()
+
+def log():
+    with open("result/crash_log.txt", "w") as f:
+        logcat = subprocess.Popen(["adb", "logcat", "*:E"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        try:
+            for line in iter(logcat.stdout.readline, b''):
+                decoded_line = line.decode('utf-8').strip()
+                if config.config.package in decoded_line:
+                    f.write(decoded_line + "\n")
+                    f.flush()
+        finally:
+            logcat.terminate()
+            logcat.stdout.close()
 
 def start_new_episode():
     global report_item_log

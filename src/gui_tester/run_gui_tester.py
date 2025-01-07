@@ -19,6 +19,8 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
     progress = progress_manager.create_progress_manager(limit_hour, limit_episode)
     agent = gui_tester.agent.create()
     experience = gui_tester.experience.create_experience()
+    
+    report.start_logging()
 
     global_step = 0
 
@@ -107,6 +109,7 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
             current_activity_name, is_of_target_application = env.get_current_activity()
             if current_activity_name == "Application Error":
                 # TODO: Save Error path.
+                logger.logger.warning("Application error occured.")
                 is_terminal = True
             elif is_of_target_application:
                 env.append_activity(current_activity_name)
@@ -157,6 +160,7 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
                 else:
                     experience.create_train_data(target_method_id)
             else:
+                # create_keep_out_train_data hasn't been implemented in Experience yet.
                 experience.create_train_data(config.method_num, global_step, agent)
             agent.optimize_model(experience.sample_batch())
             agent.update_target_network()
