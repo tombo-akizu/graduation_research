@@ -55,10 +55,10 @@ class Instrumenter:
 
         # Find declarations of methods and apply insert_report_call each of them.
         modified_code = re.sub(
-            r'\b(?P<access>(private|public|protected))?\s*(?P<static>static)?\s*(?P<type>(?!private|public|protected|if|for|while|switch|catch)[\w<>]+)(\s+(?P<name>(?!if|for|while|switch|catch)\w+))?\s*\((?P<args>([\w\s,<>\[\]@]|\.\.\.)*?)\)\s*(?P<throws>throws\s*[\w,\s]+)?\s*\{(?P<body>.*?)\}',
+            r'^\s*(?P<access>(private|public|protected))?\s*(?P<static>static)?\s*(?P<type>(?!private|public|protected|if|for|while|switch|catch|new)[\w<>]+)(\s+(?P<name>(?!if|for|while|switch|catch|new)\w+))?\s*\((?P<args>([\w\s,<>\[\]@]|\.\.\.)*?)\)\s*(?P<throws>throws\s*[\w,\s]+)?\s*\{(?P<body>.*?)\}',
             insert_report_call,
             java_code,
-            flags=re.DOTALL
+            flags=re.DOTALL | re.MULTILINE
         )
 
         return modified_code
@@ -66,12 +66,12 @@ class Instrumenter:
     # Add import callreport.CallReport; in a java_code.
     def __add_import(self, java_code):
         modified_code = None
-        if "import" in java_code:
+        if re.search(r'(import\s+[\w\.]+;\s*)', java_code):
             #  If import statement is in java_code, add "import callreport.CallReport;" following the first import statement.
-            modified_code = re.sub(r'(import\s+[a-zA-Z0-9.]+;\s*)', r'\1import callreport.CallReport;\n', java_code, count=1)
+            modified_code = re.sub(r'(import\s+[\w\.]+;\s*)', r'\1import callreport.CallReport;\n', java_code, count=1)
         else:
             # If there is no import statement in java_code, add "import callreport.CallReport;" following the package statement.
-            modified_code = re.sub(r'(\bpackage\s+[a-zA-Z0-9.]+;\s*)', r'\1\nimport callreport.CallReport;\n', java_code)
+            modified_code = re.sub(r'(package\s+[\w\.]+;\s*)', r'\1\nimport callreport.CallReport;\n', java_code)
         return modified_code
     
     # Save instrument_data as pickle in path.

@@ -10,7 +10,7 @@ OUT=$2
 INDEX=$3
 PROJECT_ROOT=$4
 COVDIR="${OUT}/coverage${INDEX}"
-PWD=`pwd`
+ORIGINAL_DIR=`pwd`
 
 adb shell am broadcast -a intent.END_COVERAGE
 
@@ -27,5 +27,5 @@ fi
 cp "${COVDIR}/coverage.ec" ${PROJECT_ROOT}/app/coverage/
 cd ${PROJECT_ROOT}
 ./gradlew jacocoInstrumenterReport -q
-cd ${PWD}
+cd ${ORIGINAL_DIR}
 cp ${PROJECT_ROOT}/app/build/reports/jacoco/jacocoInstrumenterReport/jacocoInstrumenterReport.xml "${COVDIR}/coverage.xml"

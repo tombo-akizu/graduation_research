@@ -13,7 +13,7 @@ class CoverageManager():
         if os.name == "nt": # win
             subprocess.run(['powershell', '-ExecutionPolicy', 'Bypass', '-File', './script/dumpCoverageOnce.ps1', config.config.package, "./result", str(self.index), config.config.project_root])
         else:               # mac or linux
-            subprocess.run(["./script/dumpCoverageOnce.sh", config.config.package, "./result", str(self.index)])
+            subprocess.run(["./script/dumpCoverageOnce.sh", config.config.package, "./result", str(self.index), config.config.project_root])
 
         tree = ET.parse('{}/coverage{}/coverage.xml'.format("./result", self.index))
         root = tree.getroot()

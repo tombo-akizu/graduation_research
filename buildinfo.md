@@ -65,6 +65,9 @@ README.mdに従って、次のコマンドでビルドする。COSMOを使用す
 ./gradlew assembleDebug
 ```
 
+ビルドに成功すると、`/app/build/outputs/apk/debug/app-debug.apk`が生成される。  
+Java 17.0.11でビルド成功を確認した。
+
 ## Issue of Lexica
 ### 1. InvocationTargetException
 環境: Mac  
@@ -122,3 +125,54 @@ Execution failed for task ':app:processDebugMainManifest'.
 <receiver android:name=".EndCoverageBroadcast" android:exported="true">
 ```
 とする。
+
+# Loyalty Card Locker
+[GitHub](https://github.com/brarcher/loyalty-card-locker)のREADME.mdに基づき、次のコマンドでビルドする。
+```
+./gradlew build
+```
+ビルドに成功すると、`/app/build/outputs/apk/debug/app-debug.apk`が生成される。  
+Java 1.8.0_411でビルド成功を確認した。
+
+## Issue of Loyalty Card Locker
+### 1
+環境: Mac  
+次のメッセージとともにビルドが失敗する。
+```
+Could not create service of type ScriptPluginFactory using BuildScopeServices.createScriptPluginFactory().
+> Could not create service of type PluginResolutionStrategyInternal using BuildScopeServices.createPluginResolutionStrategy().
+```
+
+Javaのバージョンを1.8.0_411 (Java 8)に下げると、この問題は解決した。
+
+[参考文献](https://stackoverflow.com/questions/53272230/could-not-create-service-of-type-scriptpluginfactory-using-buildscopeservices-cr)
+
+### 2
+環境: Mac  
+次のメッセージとともに、BUILD FAILEDと表示される。
+```
+Execution failed for task ':app:testDebugUnitTest'.
+> There were failing tests. See the report at: file:///Users/kotaroakasaka/Documents/graduation_research/target_apps/loyalty-card-locker/app/build/reports/tests/testDebugUnitTest/index.html
+```
+
+Loyalty Card Lockerでは、ビルドと同時に単体テストが実行される。この単体テストに失敗したためにエラーメッセージが表示されるが、apkファイルはビルドされている。
+
+### 3
+環境: Mac  
+次のメッセージとともに、BUILD FAILEDと表示される。
+```
+Execution failed for task ':app:lint'.
+> Lint found errors in the project; aborting build.
+  
+  Fix the issues identified by lint, or add the following to your build script to proceed with errors:
+  ...
+  android {
+      lintOptions {
+          abortOnError false
+      }
+  }
+  ...
+```
+
+lintは静的解析ツールであり、ソースコードの疑わしい箇所に警告を出している。エラーメッセージは表示されるが、apkファイルはビルドされている。
+

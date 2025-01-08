@@ -20,7 +20,12 @@ public class CallReport {
 
     public static void report(int methodId) {
         if (th == null) {
-            th = new Thread(CallReport::server);
+            th = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                CallReport.server();
+            }
+            });
             th.start();
             calledMethods = new CalledMethods(METHOD_NUM);
         }
