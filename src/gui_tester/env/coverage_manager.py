@@ -11,7 +11,7 @@ class CoverageManager():
 
     def update_coverage(self):
         if os.name == "nt": # win
-            subprocess.run(['powershell', '-ExecutionPolicy', 'Bypass', '-File', './script/dumpCoverageOnce.ps1', config.config.package, "./result", str(self.index)])
+            subprocess.run(['powershell', '-ExecutionPolicy', 'Bypass', '-File', './script/dumpCoverageOnce.ps1', config.config.package, "./result", str(self.index), config.config.project_root])
         else:               # mac or linux
             subprocess.run(["./script/dumpCoverageOnce.sh", config.config.package, "./result", str(self.index)])
 

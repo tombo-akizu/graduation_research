@@ -22,6 +22,7 @@ if __name__ == "__main__":
     parser_tester.add_argument("--device_name", default="emulator-5554", help="Android device name")
     parser_tester.add_argument("--target_method_id", type=int, required=True, help="Index of method you want to test in instrument_data of src/instrumenter/instrument.py")
     parser_tester.add_argument("--model", type=str, required=True, help="Model name of reinforcement learning agent: 4LP, 4LPWithPath, or LSTM.")
+    parser_tester.add_argument("--project_root", type=str, default="project", help="Path to root of the instrumented project of the target app.")
     parser_tester.add_argument("--off_reward_rising", action="store_true", help="If you provide this argument, the reward will stop increasing over time.")
     parser_tester.add_argument("--off_per", action="store_true", help="If you provide this argument, the PER (Prioritized Experience Replay) will be disabled.")
     parser_tester.add_argument("--off_unactionable_flooring", action="store_true", help="If you provide this argument, flooring impossible action's Q value to minimum value is disabled.")
@@ -44,6 +45,7 @@ if __name__ == "__main__":
             args.limit_episode, 
             args.target_method_id, 
             args.model, 
+            args.project_root,
             args.off_reward_rising, 
             args.off_per,
             args.off_unactionable_flooring

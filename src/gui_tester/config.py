@@ -9,9 +9,10 @@ from instrument_data import InstrumentData  # type: ignore
 config = None
 
 class Config():
-    def __init__(self, package, apk_path, model, off_reward_rising, off_per, off_unactionable_flooring):
+    def __init__(self, package, apk_path, model, project_root, off_reward_rising, off_per, off_unactionable_flooring):
         self.package = package
         self.apk_path = apk_path
+        self.project_root = project_root
         self.install_timeout = 20
 
         self.epsilon_start = 1.0
@@ -69,9 +70,9 @@ class Config():
         else:
             self.torch_device = "cpu"
 
-def create(package, apk_path, model, off_reward_rising, off_per, off_unactionable_flooring):
+def create(package, apk_path, model, project_root, off_reward_rising, off_per, off_unactionable_flooring):
     global config
     assert (config == None), "Config is singleton."
 
-    config = Config(package, apk_path, model, off_reward_rising, off_per, off_unactionable_flooring)
+    config = Config(package, apk_path, model, project_root, off_reward_rising, off_per, off_unactionable_flooring)
     return config
