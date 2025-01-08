@@ -3,7 +3,7 @@
    1. Clone [COSMO](https://github.com/H2SO4T/COSMO) in some directory with `git clone https://github.com/H2SO4T/COSMO.git`.
    2. Prepare a version of Python supported by COSMO. 3.8 has been confirmed.
    3. Prepare a target-app project in some directory.
-   4. Modify COSMO's gradle setting with `cp <root_of_this_project>/template/jacoco-instrumenter-coverage.gradle <root_of_COSMO>/templates/jacoco-instrumenter-coverage.gradle`.
+   4. Modify COSMO's gradle setting with `cp <root_of_this_project>/template/jacoco-instrumenter-coverage.gradle <root_of_COSMO>/templates/jacoco-instrumenter-coverage-old-gradle.gradle`.
    5. Add "exported" attribute in instrumented "receiver" node of AndroidManifest.xml.
       1. Open `<root_of_COSMO>/source_instrumenter.py`
       2. Insert following line next to the 23'rd line. `receiver.set(ANDROID_NS + 'exported', 'true')`
