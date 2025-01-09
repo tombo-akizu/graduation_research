@@ -55,7 +55,27 @@ Windowsなら、「環境変数を編集」アプリケーションから、ANDR
 
 環境変数設定後は、シェルを再起動することを勧める。  
 
-### 3. Last Resort
+
+### 3. COSMO general issue
+**本Issueを回避する操作を、README.mdのSetupに追加した。**  
+環境: Mac, Win  
+COSMO実行後、アプリケーションをビルドする際に、次のエラーとともにビルド失敗する。
+```
+* What went wrong:
+Execution failed for task ':app:processDebugMainManifest'.
+> Manifest merger failed : android:exported needs to be explicitly specified for element <receiver#com.serwylo.lexica.EndCoverageBroadcast>. Apps targeting Android 12 and higher are required to specify an explicit value for `android:exported` when the corresponding component has an intent filter defined. See https://developer.android.com/guide/topics/manifest/activity-element#exported for details.
+```
+エラーメッセージに従って、`app/src/main/AndroidManifest.xml` (oldではない)の6行目を、以下のように書き換える。
+```
+<receiver android:name=".EndCoverageBroadcast">
+```
+から
+```
+<receiver android:name=".EndCoverageBroadcast" android:exported="true">
+```
+とする。
+
+### 4. Last Resort
 何らかのビルド問題がどうしても解決しない場合、`~/.gradle/caches`の中身を全て削除してから再ビルドすると、上手くいくことがある。  
 私も数回、これで問題が解決したことがある。試してみてほしい。
 
@@ -107,29 +127,11 @@ app/main/AndroidManifest.xml (COSMO実行後はAndroidManifest.xml.old)の2行�
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.serwylo.lexica">
 ```
 
-### 2. Exported attribute
-**本Issueを回避する操作を、README.mdのSetupに追加した。**  
-環境: Mac, Win  
-COSMO実行後、アプリケーションをビルドする際に、次のエラーとともにビルド失敗する。
-```
-* What went wrong:
-Execution failed for task ':app:processDebugMainManifest'.
-> Manifest merger failed : android:exported needs to be explicitly specified for element <receiver#com.serwylo.lexica.EndCoverageBroadcast>. Apps targeting Android 12 and higher are required to specify an explicit value for `android:exported` when the corresponding component has an intent filter defined. See https://developer.android.com/guide/topics/manifest/activity-element#exported for details.
-```
-エラーメッセージに従って、`app/src/main/AndroidManifest.xml` (oldではない)の6行目を、以下のように書き換える。
-```
-<receiver android:name=".EndCoverageBroadcast">
-```
-から
-```
-<receiver android:name=".EndCoverageBroadcast" android:exported="true">
-```
-とする。
-
 # Loyalty Card Locker
-[GitHub](https://github.com/brarcher/loyalty-card-locker)のREADME.mdに基づき、次のコマンドでビルドする。
+[GitHub](https://github.com/brarcher/loyalty-card-locker)  
+COSMOはデバッグビルドでのみ機能するため、次のコマンドでビルドする。
 ```
-./gradlew build
+./gradlew assembleDebug
 ```
 ビルドに成功すると、`/app/build/outputs/apk/debug/app-debug.apk`が生成される。  
 Java 1.8.0_411でビルド成功を確認した。
@@ -149,6 +151,8 @@ Javaのバージョンを1.8.0_411 (Java 8)に下げると、この問題は解�
 
 ### 2
 環境: Mac  
+**本Issueが発生している場合、リリースビルドをしている可能性がある。**
+**COSMOはデバッグビルドでしか機能しないため、`./gradlew assembleDebug`でビルドすること。**  
 次のメッセージとともに、BUILD FAILEDと表示される。
 ```
 Execution failed for task ':app:testDebugUnitTest'.
@@ -161,6 +165,7 @@ Loyalty Card Lockerでは、ビルドと同時に単体テストが実行され�
 環境: Mac  
 次のメッセージとともに、BUILD FAILEDと表示される。
 ```
+* What went wrong:
 Execution failed for task ':app:lint'.
 > Lint found errors in the project; aborting build.
   
@@ -172,7 +177,14 @@ Execution failed for task ':app:lint'.
       }
   }
   ...
+  
+  Errors found:
+  
+  /Users/kotaroakasaka/Documents/graduation_research/tool/project/app/src/main/java/protect/card_locker/EndCoverageBroadcast.java:28: Error: Try-with-resources requires API level 19 (current min is 16) [NewApi]
+          try (OutputStream out = new FileOutputStream(COVERAGE_FILE_PATH, false)) {
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ```
 
+`app/build.gradle`の`minSdkVersion`の値を19にすると消える。この操作が必須かは未検証。  
 lintは静的解析ツールであり、ソースコードの疑わしい箇所に警告を出している。エラーメッセージは表示されるが、apkファイルはビルドされている。
 

@@ -3,7 +3,11 @@
    1. Clone [COSMO](https://github.com/H2SO4T/COSMO) in some directory with `git clone https://github.com/H2SO4T/COSMO.git`.
    2. Prepare a version of Python supported by COSMO. 3.8 has been confirmed.
    3. Prepare a target-app project in some directory.
-   4. Modify COSMO's gradle setting with `cp <root_of_this_project>/template/jacoco-instrumenter-coverage.gradle <root_of_COSMO>/templates/jacoco-instrumenter-coverage-old-gradle.gradle`.
+   4. Modify COSMO's gradle setting with 
+   ```
+   cp <root_of_this_project>/template/jacoco-instrumenter-coverage.gradle <root_of_COSMO>/templates/jacoco-instrumenter-coverage.gradle
+   cp <root_of_this_project>/template/jacoco-instrumenter-coverage-old-gradle.gradle <root_of_COSMO>/templates/jacoco-instrumenter-coverage-old-gradle.gradle
+   ```
    5. Add "exported" attribute in instrumented "receiver" node of AndroidManifest.xml.
       1. Open `<root_of_COSMO>/source_instrumenter.py`
       2. Insert following line next to the 23'rd line. `receiver.set(ANDROID_NS + 'exported', 'true')`
@@ -71,6 +75,14 @@ COSMOによるインストルメント前に、COSMO/templates/jacoco-instrument
 アプリケーションにネットワーク権限がないかもしれない。
 AndroidManifest.xmlのmanifestの子ノードとして、以下を追加する。  
 `<uses-permission android:name="android.permission.INTERNET" />`
+
+カバレッジレポートの生成に失敗する。  
+次のメッセージとともにプログラムが終了する。  
+```
+Execution failed for task ':app:jacocoInstrumenterReport'.
+> Error while creating report
+```  
+対象アプリケーションがデバッグビルドされていない可能性がある。
 
 エラーメッセージをわかりやすく
 - AVDと繋がらない
