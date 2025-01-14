@@ -6,6 +6,7 @@ from gui_tester.experience import Experience                # type: ignore
 from gui_tester.caller_replay_buffer import CallerReplayBuffer      # type: ignore
 from gui_tester.explorer_replay_buffer import ExplorerReplayBuffer  # type: ignore
 import gui_tester.config as config                          # type: ignore
+import logger
 
 class MultiNetExperience(Experience):
     def __init__(self):
@@ -47,8 +48,9 @@ class MultiNetExperience(Experience):
                 self.terminal_path_dict[self.current_terminal_path] += 1
             else:
                 self.terminal_path_dict[self.current_terminal_path] = 1
+                logger.logger.info("New path is appended in paths.")
+                logger.logger.info("Current paths len is {}.".format(len(self.terminal_path_dict)))
             self.target_method_is_called = True
-        print("current paths len is {}".format(len(self.terminal_path_dict)))
     
     def is_episode_terminal(self):
         return self.is_caller_mode and self.target_method_is_called

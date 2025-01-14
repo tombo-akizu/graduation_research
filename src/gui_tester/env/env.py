@@ -18,6 +18,7 @@ class Environment():
         self.device = u2.connect(device_name)
         self.activities = []
         self.activities_blacklist = []
+        self.selected_activity = ""
         self.coverage = CoverageManager()
         self.executor = Executor(self.device)
         self.observer = Observer()
@@ -33,13 +34,19 @@ class Environment():
         subprocess.run(['adb', 'shell', 'monkey', '-p', config.config.package, '-c', 'android.intent.category.LAUNCHER', '1'])
 
         if len(self.activities) > 0:
-            a = random.choice(self.activities)
-            logger.logger.info("Jump to activity %s" % a)
-            result = subprocess.run(['adb', 'shell', 'am', 'start', '-n', '{}/.{}'.format(config.config.package, a)], capture_output=True, text=True)
+            self.selected_activity = random.choice(self.activities)
+            logger.logger.info("Jump to activity %s" % self.selected_activity)
+            result = subprocess.run(['adb', 'shell', 'am', 'start', '-n', '{}/.{}'.format(config.config.package, self.selected_activity)], capture_output=True, text=True)
             if result.stderr != "":
-                # Can't jump to a.
-                self.activities.remove(a)
-                self.activities_blacklist.append(a)
+                # Can't jump to self.selected_activity.
+                self.activities.remove(self.selected_activity)
+                self.activities_blacklist.append(self.selected_activity)
+                logger.logger.info("Blacklist appending happens on start.")
+
+    def exclude_selected_activity(self):
+        self.activities.remove(self.selected_activity)
+        self.activities_blacklist.append(self.selected_activity)
+        logger.logger.info("Blacklist appending happens on exclude_current_activity.")
 
     def reset(self):
         self.try_uiautomator_process(lambda: self.device.press("home"))

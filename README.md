@@ -38,7 +38,23 @@
    ```
    python src/run.py instrument --project_root <path_to_root_of_target_app>
    ```
-5. Completed
+
+   You also need to acquire the network permission manually. Open `<path_to_root_of_target_app>/app/src/main/AndroidManifest.xml` and insert following lines into the `<manifest>` block.
+   ```
+   <uses-permission android:name="android.permission.INTERNET" />
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+   ```
+
+   *This operation should be done by the instrument execution but I haven't implemented yet...*
+
+5. Build the target app.  
+   Move to the root directory of the target app and run the following command.
+   ```
+   ./gradlew assembleDebug
+   ```
+   If something goes wrong, see `buildinfo.md` of this repogitry.
+
+6. Completed
    You can get instrumented apk file as `project/app/build/outputs/apk/debug/app-debug.apk`.
 
 # Execution

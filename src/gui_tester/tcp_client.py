@@ -18,5 +18,5 @@ def get_method_bits():
 
     tcp_client.close()
 
-    logger.logger.debug(method_bits)
+    logger.logger.debug("Method Bits: {}".format(method_bits))
     return method_bits

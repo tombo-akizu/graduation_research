@@ -55,6 +55,7 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
             continue
         elif current_screen_status == "Stopped Screen":
             logger.logger.warning("Initial state is Stopped Screen...")
+            env.exclude_selected_activity()
             env.reboot()
             continue
         elif current_screen_status == "Out of App":

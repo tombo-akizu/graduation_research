@@ -4,9 +4,10 @@ import threading
 
 from matplotlib import pyplot as plt
 
-from gui_tester.path import Path    # type: ignore
-import logger                       # type: ignore
-import gui_tester.config as config  # type: ignore
+from gui_tester.log_reader import LogReader # type: ignore
+from gui_tester.path import Path            # type: ignore
+import logger                               # type: ignore
+import gui_tester.config as config          # type: ignore
 
 class ReportItem():
     def __init__(self, action, new_state, loss, target_is_called, new_state_status, path):
@@ -31,17 +32,17 @@ def start_logging():
     log_thread.start()
 
 def log():
-    with open("result/crash_log.txt", "w") as f:
-        logcat = subprocess.Popen(["adb", "logcat", "*:E"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-        try:
-            for line in iter(logcat.stdout.readline, b''):
-                decoded_line = line.decode('utf-8').strip()
-                if config.config.package in decoded_line:
-                    f.write(decoded_line + "\n")
-                    f.flush()
-        finally:
-            logcat.terminate()
-            logcat.stdout.close()
+    with open("result/logcat.txt", "w") as f:
+        logcat = subprocess.Popen(["adb", "logcat", "*:E"], stdout=f, stderr=subprocess.DEVNULL)
+        # try:
+        #     for line in iter(logcat.stdout.readline, b''):
+        #         decoded_line = line.decode('utf-8').strip()
+        #         if config.config.package in decoded_line:
+        #             f.write(decoded_line + "\n")
+        #             f.flush()
+        # finally:
+        #     logcat.terminate()
+        #     logcat.stdout.close()
 
 def start_new_episode():
     global report_item_log
@@ -134,10 +135,12 @@ def output_report():
     ax.hist(steps, bins=16)
     ax.set_xlabel('Step')
     ax.set_ylabel('Found new path')
-    fig.savefig("result/found_new_pass.png")
+    fig.savefig("result/found_new_path.png")
 
     for item in report_path_log:
         logger.logger.info("Path {} is found at {}'th step.".format(item.path, item.global_step))
 
     with open("result/path.txt", "w") as f:
         f.write(str(len(report_path_log)))
+
+    LogReader().read_log()
