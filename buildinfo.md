@@ -188,3 +188,24 @@ Execution failed for task ':app:lint'.
 `app/build.gradle`の`minSdkVersion`の値を19にすると消える。この操作が必須かは未検証。  
 lintは静的解析ツールであり、ソースコードの疑わしい箇所に警告を出している。エラーメッセージは表示されるが、apkファイルはビルドされている。
 
+# Pocket Maps
+[github](https://github.com/junjunguo/PocketMaps/blob/master/PocketMaps/build.gradle)  
+COSMOが機能するように、デバッグビルドする。
+```
+./gradlew assembleDebug
+```
+
+Java 1.8.0_411でビルド成功した。
+
+## Issue of Pocket Maps
+### 1
+環境: Mac  
+`./gradlew assembleDebug`を実行すると、次のエラーでビルドに失敗する。  
+
+```
+Could not compile settings file '/Users/kotaroakasaka/Documents/graduation_research/tool/project/settings.gradle'.
+> startup failed:
+  General error during semantic analysis: Unsupported class file major version 61
+```
+
+Javaのバージョンを1.8.0_411 (Java 8)に下げると、この問題は解決した。
