@@ -42,9 +42,9 @@ class SingleNetAgent(Agent):
     def is_to_select_action_greedily(self):
         return random.random() >= self.epsilon
 
-    def select_action_greedily(self, components, state, target_mathod_id, current_path):
+    def select_action_greedily(self, components, state, current_path):
         # Start processing input tensors for DQN...
-        target_mathod_id_tensor = torch.tensor([target_mathod_id], dtype=torch.float32)
+        target_mathod_id_tensor = torch.tensor([config.config.target_mathod_id], dtype=torch.float32)
         input = torch.cat((target_mathod_id_tensor, state.get_tensor())).to(config.config.torch_device)
 
         if config.config.model == "4LP" or config.config.model == "4LPWithPath":

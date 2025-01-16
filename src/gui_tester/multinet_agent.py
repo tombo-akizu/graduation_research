@@ -60,11 +60,11 @@ class MultiNetAgent(Agent):
         else:
             assert False, "Invalid mode"
 
-    def select_action_greedily(self, components, state, target_method_id, current_path):
+    def select_action_greedily(self, components, state, current_path):
         # Start processing input tensors for DQN...
         state_tensor = state.get_tensor().to(config.config.torch_device)
         path_tensor = current_path.get_path_sequence_tensor().to(config.config.torch_device)
-        target_tensor = torch.tensor([target_method_id]).to(config.config.torch_device)
+        target_tensor = torch.tensor([config.config.target_method_id]).to(config.config.torch_device)
         
         state_tensor = torch.unsqueeze(state_tensor, dim=0)   # forward of LSTM requires 3-dim tensor...
         path_tensor = torch.unsqueeze(path_tensor, dim=0)

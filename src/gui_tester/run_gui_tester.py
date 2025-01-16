@@ -14,7 +14,7 @@ import gui_tester.tcp_client as client                  # type: ignore
 import logger                                           # type: ignore
 
 def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, target_method_id, model, project_root, off_reward_rising, off_per, off_unactionable_flooring):
-    config = gui_tester.config.create(package, apk_path, model, project_root, off_reward_rising, off_per, off_unactionable_flooring)
+    config = gui_tester.config.create(package, apk_path, target_method_id, model, project_root, off_reward_rising, off_per, off_unactionable_flooring)
     env = Environment(device_name)
     progress = progress_manager.create_progress_manager(limit_hour, limit_episode)
     agent = gui_tester.agent.create()
@@ -82,7 +82,7 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
 
             if agent.is_to_select_action_greedily():
                 logger.logger.debug("[{}] Act greedy".format(step))
-                action = agent.select_action_greedily(current_screen_components, current_state, target_method_id, experience.get_current_path())
+                action = agent.select_action_greedily(current_screen_components, current_state, experience.get_current_path())
             else:
                 logger.logger.debug("[{}] Act random".format(step))
                 action = agent.select_action_randomly(current_screen_components)
@@ -146,7 +146,7 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
 
             # MultiNetExperience.check_target_is_called updates the internal state.
             if isinstance(agent, MultiNetAgent):
-                experience.check_target_is_called(called_methods, target_method_id)
+                experience.check_target_is_called(called_methods)
                 is_terminal = is_terminal or experience.is_episode_terminal()
 
             is_terminal = is_terminal or experience.state_repeats_too_much() or (step == config.max_ep_length)
@@ -157,9 +157,9 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
             experience.append(current_state, action.id, new_state, called_methods)
             if isinstance(agent, MultiNetAgent):
                 if new_screen_status == "Out of App" and ((called_methods & (1 << target_method_id)) == 0):
-                    experience.create_keep_out_train_data(target_method_id)
+                    experience.create_keep_out_train_data()
                 else:
-                    experience.create_train_data(target_method_id)
+                    experience.create_train_data()
             else:
                 # create_keep_out_train_data hasn't been implemented in Experience yet.
                 experience.create_train_data(config.method_num, global_step, agent)

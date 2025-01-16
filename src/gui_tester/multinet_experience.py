@@ -18,7 +18,8 @@ class MultiNetExperience(Experience):
         self.terminal_path_dict = {}
         self.current_terminal_path = None
         self.is_caller_mode = False
-        self.target_method_is_called = False
+        self.target_method_is_called = False        # Target method has been called in the episode or hasn't.
+        self.target_method_has_been_called = False  # Target method has been called through the past episodes or hasn't.
 
         self.explore_terminal_epsilon = config.config.explorer_terminal_epsilon_start
         self.epsilon_step = (config.config.explorer_terminal_epsilon_start - config.config.explorer_terminal_epsilon_end) / config.config.explorer_terminal_episode_end
@@ -34,6 +35,7 @@ class MultiNetExperience(Experience):
 
     def is_to_switch(self, step_num):
         if self.is_caller_mode: return False
+        if not self.target_method_has_been_called: return False
         if step_num >= config.config.explore_step_num: return True
         if self.terminal_path_dict.get(self.current_path.get_path_sequence_tuple(), 0) > 0: return False
         return random.random() >= self.explore_terminal_epsilon
@@ -42,8 +44,8 @@ class MultiNetExperience(Experience):
         self.current_terminal_path = self.current_path.get_path_sequence_tuple()
         self.is_caller_mode = True
 
-    def check_target_is_called(self, called_methods: int, target_method_id: int):
-        if self.is_caller_mode and ((called_methods & (1 << target_method_id)) > 0):
+    def check_target_is_called(self, called_methods: int):
+        if self.is_caller_mode and ((called_methods & (1 << config.config.target_method_id)) > 0):
             if self.current_terminal_path in self.terminal_path_dict:
                 self.terminal_path_dict[self.current_terminal_path] += 1
             else:
@@ -54,9 +56,14 @@ class MultiNetExperience(Experience):
     
     def is_episode_terminal(self):
         return self.is_caller_mode and self.target_method_is_called
+
+    def append(self, state: State, action_idx: int, new_state: State, called_methods: int):
+        super().append(state, action_idx, new_state, called_methods)
+        if (called_methods & (1 << config.config.target_method_id)) > 0:
+            self.target_method_has_been_called = True
     
     # Override Experience.create_train_data.
-    def create_train_data(self, target_method_id):
+    def create_train_data(self):
         assert len(self.experience[-1]) >= 2
         called_methods_bits = self.experience[-1][-1].called_methods
 
@@ -82,13 +89,13 @@ class MultiNetExperience(Experience):
                         )
         self.caller_replay_buffer.create_and_append_data(
             item=self.experience[-1][-1],
-            step_to_call_global_target=self.__step_num_to_call_method(len(self.experience[-1]) - 1, target_method_id)
+            step_to_call_global_target=self.__step_num_to_call_method(len(self.experience[-1]) - 1, config.config.target_method_id)
         )
 
-    def create_keep_out_train_data(self, target_method_id):
+    def create_keep_out_train_data(self):
         item = self.experience[-1][-1]
-        self.explorer_replay_buffer.create_and_append_keep_out_data(target_method_id, item.state, item.action_idx, self.current_path.clone())
-        self.caller_replay_buffer.create_and_append_keep_out_data(target_method_id, item.state, item.action_idx)
+        self.explorer_replay_buffer.create_and_append_keep_out_data(config.config.target_method_id, item.state, item.action_idx, self.current_path.clone())
+        self.caller_replay_buffer.create_and_append_keep_out_data(config.config.target_method_id, item.state, item.action_idx)
 
     def __step_num_to_call_method(self, departure, method_id):
         step_idx = departure
