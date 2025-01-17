@@ -23,7 +23,6 @@ class Observer():
         if len(root) == 0:  # Handle a situation that there is no item to input but menu buttons. TODO: Is this correctly works?
             status = "Empty Screen"
         elif self.__is_stopped_screen(root):
-            logger.warning("is stopped screen")
             status = "Stopped Screen"
         elif self.is_out_of_app():
             status = "Out of App"
@@ -124,5 +123,5 @@ class Observer():
         if "Application Error" in output:
             return "Application Error", False
         is_of_target_application = config.config.package in output
-        activity_name = output.split('/')[-1].replace(config.config.package + '.', '').split('}')[0]    # original
+        activity_name = output.split("{")[-1].split("}")[0].split(" ")[2].split("/")[-1]
         return activity_name, is_of_target_application

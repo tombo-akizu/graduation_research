@@ -19,8 +19,9 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
     progress = progress_manager.create_progress_manager(limit_hour, limit_episode)
     agent = gui_tester.agent.create()
     experience = gui_tester.experience.create_experience()
-    
+
     report.start_logging()
+    env.install()
 
     global_step = 0
 
@@ -60,6 +61,7 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
             continue
         elif current_screen_status == "Out of App":
             logger.logger.warning("Initial state is out of app...")
+            env.exclude_selected_activity()
             env.reboot()
             continue
 
@@ -197,3 +199,4 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
     
     report.output_report()
     env.merge_coverage()
+    env.uninstall()

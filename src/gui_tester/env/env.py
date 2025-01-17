@@ -28,20 +28,15 @@ class Environment():
 
     def start(self):
         self.try_uiautomator_process(lambda: self.device.press("home"))
-        self.__install()
-
-        # Open target app.
-        subprocess.run(['adb', 'shell', 'monkey', '-p', config.config.package, '-c', 'android.intent.category.LAUNCHER', '1'])
 
         if len(self.activities) > 0:
+            # Open the target app with an activity.
             self.selected_activity = random.choice(self.activities)
             logger.logger.info("Jump to activity %s" % self.selected_activity)
-            result = subprocess.run(['adb', 'shell', 'am', 'start', '-n', '{}/.{}'.format(config.config.package, self.selected_activity)], capture_output=True, text=True)
-            if result.stderr != "":
-                # Can't jump to self.selected_activity.
-                self.activities.remove(self.selected_activity)
-                self.activities_blacklist.append(self.selected_activity)
-                logger.logger.info("Blacklist appending happens on start.")
+            self.device.app_start(config.config.package, self.selected_activity)
+        else:
+            # Open the target app with the initial activity.
+            self.device.app_start(config.config.package)
 
     def exclude_selected_activity(self):
         self.activities.remove(self.selected_activity)
@@ -50,9 +45,10 @@ class Environment():
 
     def reset(self):
         self.try_uiautomator_process(lambda: self.device.press("home"))
-        self.__uninstall()
+        # self.__uninstall()
+        self.device.app_clear(config.config.package)
         
-    def __install(self):
+    def install(self):
         while True:
             try:
                 error = subprocess.run(["adb", "install", config.config.apk_path], timeout=config.config.install_timeout, capture_output=True, text=True).stderr
@@ -66,7 +62,7 @@ class Environment():
                 logger.logger.warning("Install timeout expired")
                 subprocess.run(["adb", "uninstall", config.config.package])
 
-    def __uninstall(self):
+    def uninstall(self):
         subprocess.run(["adb", "uninstall", config.config.package])
 
     def get_components(self):
@@ -77,6 +73,8 @@ class Environment():
                 logger.logger.warning("Empty screen")
                 time.sleep(2)
                 continue
+            elif status == "Stopped Screen":
+                logger.logger.warning("Stopped screen")
         return components, status
 
     def is_out_of_app(self):
@@ -108,8 +106,6 @@ class Environment():
         self.coverage.merge_coverage()
 
     def reboot(self):
-        # subprocess.run(['adb', 'reboot'])
-        # self.device = u2.connect("emulator-5554")
         while True:
             try:
                 self.device.reset_uiautomator()
@@ -119,13 +115,7 @@ class Environment():
                 logger.logger.warning(e)
                 time.sleep(10)
         logger.logger.warning("Reset UIAutomator succeed.")
-        self.__uninstall()
-
-    # def reconnect(self):
-    #     subprocess.run(['adb', 'reboot'])
-    #     time.sleep(10)
-    #     self.device = u2.connect("emulator-5554")
-    ##     self.device.reset_uiautomator()
+        self.device.app_clear(config.config.package)
 
     def try_uiautomator_process(self, process):
         for _ in range(config.config.max_uiautomator_retry):
