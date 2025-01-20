@@ -46,7 +46,9 @@ class Environment():
     def reset(self):
         self.try_uiautomator_process(lambda: self.device.press("home"))
         # self.__uninstall()
-        self.device.app_clear(config.config.package)
+        # self.device.app_clear(config.config.package)
+        subprocess.run(["adb", "shell", "am", "force-stop", config.config.package])
+        subprocess.run(["adb", "shell", "am", "kill-all"])
         
     def install(self):
         while True:
@@ -115,7 +117,10 @@ class Environment():
                 logger.logger.warning(e)
                 time.sleep(10)
         logger.logger.warning("Reset UIAutomator succeed.")
-        self.device.app_clear(config.config.package)
+        # self.device.app_clear(config.config.package)
+        subprocess.run(["adb", "shell", "am", "force-stop", config.config.package])
+        subprocess.run(["adb", "shell", "am", "kill-all"])
+
 
     def try_uiautomator_process(self, process):
         for _ in range(config.config.max_uiautomator_retry):

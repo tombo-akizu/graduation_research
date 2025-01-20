@@ -209,3 +209,125 @@ Could not compile settings file '/Users/kotaroakasaka/Documents/graduation_resea
 ```
 
 Javaのバージョンを1.8.0_411 (Java 8)に下げると、この問題は解決した。
+
+# scope
+[github](https://github.com/billthefarmer/scope)  
+\COSMOが機能するように、デバッグビルドする。
+```
+./gradlew assembleDebug
+```
+
+Java 17.0.11でビルド成功を確認した。
+
+## Issue of scope
+### 1
+環境: Mac  
+COSMOを実行すると、次のメッセージとともにインストルメント失敗する。  
+
+```
+  package = root.attrib['package']
+KeyError: 'package'
+```
+`app/src/main/AndroidManifest.xml` (COSMO実行後は`app/src/main/AndroidManifest.xml.old`)の`<manifest>`ブロックに、package属性を加える。すなわち、
+```
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:ns1="http://schemas.android.com/tools" android:installLocation="auto" ns1:ignore="GoogleAppIndexingWarning">
+```
+を
+```
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:ns1="http://schemas.android.com/tools" android:installLocation="auto" ns1:ignore="GoogleAppIndexingWarning" package="org.billthefarmer.scope">
+```
+にする。
+
+### 2
+環境: Mac  
+本ツールのインストルメントを行うために、ディレクトリ構成に手を加える必要がある。  
+`<root_of_scope>`下に`app`ディレクトリを作り、他の全てのファイル・ディレクトリを`app`内に移せばよい。  
+
+### 3
+環境: Mac  
+Java 8で`./gradlew assembleDebug`を実行すると、次のエラーメッセージとともにビルド失敗する。
+```
+* What went wrong:
+A problem occurred configuring root project 'app'.
+> Could not resolve all files for configuration ':classpath'.
+   > Could not resolve com.android.tools.build:gradle:7.4.2.
+     Required by:
+         project :
+      > No matching variant of com.android.tools.build:gradle:7.4.2 was found. The consumer was configured to find a runtime of a library compatible with Java 8, packaged as a jar, and its dependencies declared externally, as well as attribute 'org.gradle.plugin.api-version' with value '7.5' but:
+          - Variant 'apiElements' capability com.android.tools.build:gradle:7.4.2 declares a library, packaged as a jar, and its dependencies declared externally:
+              - Incompatible because this component declares an API of a component compatible with Java 11 and the consumer needed a runtime of a component compatible with Java 8
+              - Other compatible attribute:
+                  - Doesn't say anything about org.gradle.plugin.api-version (required '7.5')
+          - Variant 'javadocElements' capability com.android.tools.build:gradle:7.4.2 declares a runtime of a component, and its dependencies declared externally:
+              - Incompatible because this component declares documentation and the consumer needed a library
+              - Other compatible attributes:
+                  - Doesn't say anything about its target Java version (required compatibility with Java 8)
+                  - Doesn't say anything about its elements (required them packaged as a jar)
+                  - Doesn't say anything about org.gradle.plugin.api-version (required '7.5')
+          - Variant 'runtimeElements' capability com.android.tools.build:gradle:7.4.2 declares a runtime of a library, packaged as a jar, and its dependencies declared externally:
+              - Incompatible because this component declares a component compatible with Java 11 and the consumer needed a component compatible with Java 8
+              - Other compatible attribute:
+                  - Doesn't say anything about org.gradle.plugin.api-version (required '7.5')
+          - Variant 'sourcesElements' capability com.android.tools.build:gradle:7.4.2 declares a runtime of a component, and its dependencies declared externally:
+              - Incompatible because this component declares documentation and the consumer needed a library
+              - Other compatible attributes:
+                  - Doesn't say anything about its target Java version (required compatibility with Java 8)
+                  - Doesn't say anything about its elements (required them packaged as a jar)
+                  - Doesn't say anything about org.gradle.plugin.api-version (required '7.5')
+```
+Javaのバージョンを17.0.11 (Java 17)に変更すると、解決した。
+
+# kboard
+[github](https://github.com/adgad/kboard)  
+COSMOが機能するように、デバッグビルドする。
+```
+./gradlew assembleDebug
+```
+
+Java 17.0.11でビルド成功を確認した。
+
+## Issue of kboard
+### 1
+環境: Mac  
+COSMOを実行すると、次のメッセージとともにインストルメント失敗する。  
+```
+  package = root.attrib['package']
+KeyError: 'package'
+```
+`app/src/main/AndroidManifest.xml` (COSMO実行後は`app/src/main/AndroidManifest.xml.old`)の`<manifest>`ブロックに、package属性を加える。すなわち、
+```
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+```
+を
+```
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.adgad.kboard">
+```
+にする。
+
+### 2
+環境: Mac  
+`./gradlew assembleDebug`を実行すると、次のメッセージとともにビルド失敗する。  
+```
+* What went wrong:
+Execution failed for task ':app:checkDebugAarMetadata'.
+> Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
+   > Could not find com.android.volley:volley:1.1.1.
+     Searched in the following locations:
+       - https://jcenter.bintray.com/com/android/volley/volley/1.1.1/volley-1.1.1.pom
+       - https://maven.google.com/com/android/volley/volley/1.1.1/volley-1.1.1.pom
+     Required by:
+         project :app
+```
+
+エラーメッセージが示している、依存先の通信ライブラリ"volley"がリンク切れしていることが原因。  
+[https://jcenter.bintray.com/com/android/volley/volley](https://jcenter.bintray.com/com/android/volley/volley)にアクセスし、現在配布されているバージョンを確かめる。  
+今回は1.2.1だったため、`<root_of_app>/app/build.gradle` の43行目を、以下のように書き換える。  
+```
+implementation 'com.android.volley:volley:1.1.1'
+```
+から
+```
+implementation 'com.android.volley:volley:1.2.1'
+```
+とする。  
+
