@@ -1,5 +1,6 @@
 .pytest_cache/
 .venv/
+built_apps/
 project/
 __pycache__/
 *.apk
