@@ -9,11 +9,10 @@ from instrument_data import InstrumentData  # type: ignore
 config = None
 
 class Config():
-    def __init__(self, package, apk_path, target_method_id, model, project_root, off_reward_rising, off_per, off_unactionable_flooring):
+    def __init__(self, package, apk_path, target_method_id):
         self.package = package
         self.apk_path = apk_path
         self.target_method_id = target_method_id
-        self.project_root = project_root
         self.install_timeout = 20
 
         self.epsilon_start = 1.0
@@ -36,9 +35,6 @@ class Config():
         self.max_ep_length = 20
         self.explore_step_num = 15
 
-        # How many times the gui_tester calculate coverage (max).
-        self.coverage_frequency = 100
-
         # Length of replay buffer.
         self.replay_ratio = 1000
 
@@ -57,13 +53,6 @@ class Config():
         instrument_data = pickle.load(open("instrument_data/instrument.pkl", "rb"))
         self.method_num = len(instrument_data)
 
-        self.model = model
-
-        self.off_reward_rising = off_reward_rising
-        self.reward_rise_rate = 1.0 / 900.0 # About 900 steps are taken in an hour.
-        self.off_per = off_per
-        self.off_unactionable_flooring = off_unactionable_flooring
-
         if torch.cuda.is_available():
             self.torch_device = "cuda"
         elif torch.backends.mps.is_available():
@@ -71,9 +60,9 @@ class Config():
         else:
             self.torch_device = "cpu"
 
-def create(package, apk_path, target_method_id, model, project_root, off_reward_rising, off_per, off_unactionable_flooring):
+def create(package, apk_path, target_method_id):
     global config
     assert (config == None), "Config is singleton."
 
-    config = Config(package, apk_path, target_method_id, model, project_root, off_reward_rising, off_per, off_unactionable_flooring)
+    config = Config(package, apk_path, target_method_id)
     return config

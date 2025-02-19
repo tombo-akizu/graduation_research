@@ -9,7 +9,6 @@ from uiautomator2 import DeviceError, RPCUnknownError   # type: ignore
 import logger                                   # type: ignore
 import gui_tester.config as config              # type: ignore
 from gui_tester.component import Component      # type: ignore
-from .coverage_manager import CoverageManager   # type: ignore
 from .executor import Executor                  # type: ignore
 from .observer import Observer                  # type: ignore
 
@@ -19,7 +18,6 @@ class Environment():
         self.activities = []
         self.activities_blacklist = []
         self.selected_activity = ""
-        self.coverage = CoverageManager()
         self.executor = Executor(self.device)
         self.observer = Observer()
 
@@ -45,8 +43,6 @@ class Environment():
 
     def reset(self):
         self.try_uiautomator_process(lambda: self.device.press("home"))
-        # self.__uninstall()
-        # self.device.app_clear(config.config.package)
         subprocess.run(["adb", "shell", "am", "force-stop", config.config.package])
         subprocess.run(["adb", "shell", "am", "kill-all"])
         
@@ -97,15 +93,6 @@ class Environment():
     def append_activity(self, activity_name):
         if not activity_name in self.activities and not activity_name in self.activities_blacklist:
             self.activities.append(activity_name)
-
-    def update_coverage(self):
-        self.coverage.update_coverage()
-
-    def get_coverage(self):
-        return self.coverage.get_coverage()
-
-    def merge_coverage(self):
-        self.coverage.merge_coverage()
 
     def reboot(self):
         while True:

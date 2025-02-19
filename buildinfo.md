@@ -55,32 +55,12 @@ Windowsなら、「環境変数を編集」アプリケーションから、ANDR
 
 環境変数設定後は、シェルを再起動することを勧める。  
 
-
-### 3. COSMO general issue
-**本Issueを回避する操作を、README.mdのSetupに追加した。**  
-環境: Mac, Win  
-COSMO実行後、アプリケーションをビルドする際に、次のエラーとともにビルド失敗する。
-```
-* What went wrong:
-Execution failed for task ':app:processDebugMainManifest'.
-> Manifest merger failed : android:exported needs to be explicitly specified for element <receiver#com.serwylo.lexica.EndCoverageBroadcast>. Apps targeting Android 12 and higher are required to specify an explicit value for `android:exported` when the corresponding component has an intent filter defined. See https://developer.android.com/guide/topics/manifest/activity-element#exported for details.
-```
-エラーメッセージに従って、`app/src/main/AndroidManifest.xml` (oldではない)の6行目を、以下のように書き換える。
-```
-<receiver android:name=".EndCoverageBroadcast">
-```
-から
-```
-<receiver android:name=".EndCoverageBroadcast" android:exported="true">
-```
-とする。
-
-### 4. Last Resort
+### 3. Last Resort
 何らかのビルド問題がどうしても解決しない場合、`~/.gradle/caches`の中身を全て削除してから再ビルドすると、上手くいくことがある。  
 私も数回、これで問題が解決したことがある。試してみてほしい。
 
 # Lexica
-README.mdに従って、次のコマンドでビルドする。COSMOを使用するために、デバッグビルドする。
+README.mdに従って、次のコマンドでビルドする。
 ```
 ./gradlew assembleDebug
 ```
@@ -111,25 +91,9 @@ kapt 'androidx.room:room-compiler:2.2.4'
 に修正する。  
 [参考資料](https://stackoverflow.com/questions/63649694/a-failure-occurred-while-executing-org-jetbrains-kotlin-gradle-internal-kaptexec)
 
-## COSMO issue of Lexica
-### 1. COSMO package error
-環境: Mac, Win  
-cli.py実行時に、次のエラーが発生する。
-```
-KeyError: 'package'
-```
-app/main/AndroidManifest.xml (COSMO実行後はAndroidManifest.xml.old)の2行目を、以下のように変更する。
-```
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-```
-から、
-```
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.serwylo.lexica">
-```
-
 # Loyalty Card Locker
 [GitHub](https://github.com/brarcher/loyalty-card-locker)  
-COSMOはデバッグビルドでのみ機能するため、次のコマンドでビルドする。
+次のコマンドでビルドする。
 ```
 ./gradlew assembleDebug
 ```
@@ -152,7 +116,7 @@ Javaのバージョンを1.8.0_411 (Java 8)に下げると、この問題は解�
 ### 2
 環境: Mac  
 **本Issueが発生している場合、リリースビルドをしている可能性がある。**
-**COSMOはデバッグビルドでしか機能しないため、`./gradlew assembleDebug`でビルドすること。**  
+**`./gradlew assembleDebug`でビルドすれば、発生しない。**  
 次のメッセージとともに、BUILD FAILEDと表示される。
 ```
 Execution failed for task ':app:testDebugUnitTest'.
@@ -190,7 +154,7 @@ lintは静的解析ツールであり、ソースコードの疑わしい箇所�
 
 # Pocket Maps
 [github](https://github.com/junjunguo/PocketMaps/blob/master/PocketMaps/build.gradle)  
-COSMOが機能するように、デバッグビルドする。
+デバッグビルドする。
 ```
 ./gradlew assembleDebug
 ```
@@ -212,7 +176,7 @@ Javaのバージョンを1.8.0_411 (Java 8)に下げると、この問題は解�
 
 # scope
 [github](https://github.com/billthefarmer/scope)  
-\COSMOが機能するように、デバッグビルドする。
+デバッグビルドする。
 ```
 ./gradlew assembleDebug
 ```
@@ -222,28 +186,10 @@ Java 17.0.11でビルド成功を確認した。
 ## Issue of scope
 ### 1
 環境: Mac  
-COSMOを実行すると、次のメッセージとともにインストルメント失敗する。  
-
-```
-  package = root.attrib['package']
-KeyError: 'package'
-```
-`app/src/main/AndroidManifest.xml` (COSMO実行後は`app/src/main/AndroidManifest.xml.old`)の`<manifest>`ブロックに、package属性を加える。すなわち、
-```
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:ns1="http://schemas.android.com/tools" android:installLocation="auto" ns1:ignore="GoogleAppIndexingWarning">
-```
-を
-```
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:ns1="http://schemas.android.com/tools" android:installLocation="auto" ns1:ignore="GoogleAppIndexingWarning" package="org.billthefarmer.scope">
-```
-にする。
-
-### 2
-環境: Mac  
 本ツールのインストルメントを行うために、ディレクトリ構成に手を加える必要がある。  
 `<root_of_scope>`下に`app`ディレクトリを作り、他の全てのファイル・ディレクトリを`app`内に移せばよい。  
 
-### 3
+### 2
 環境: Mac  
 Java 8で`./gradlew assembleDebug`を実行すると、次のエラーメッセージとともにビルド失敗する。
 ```
@@ -279,7 +225,7 @@ Javaのバージョンを17.0.11 (Java 17)に変更すると、解決した。
 
 # kboard
 [github](https://github.com/adgad/kboard)  
-COSMOが機能するように、デバッグビルドする。
+デバッグビルドする。
 ```
 ./gradlew assembleDebug
 ```
@@ -288,23 +234,6 @@ Java 17.0.11でビルド成功を確認した。
 
 ## Issue of kboard
 ### 1
-環境: Mac  
-COSMOを実行すると、次のメッセージとともにインストルメント失敗する。  
-```
-  package = root.attrib['package']
-KeyError: 'package'
-```
-`app/src/main/AndroidManifest.xml` (COSMO実行後は`app/src/main/AndroidManifest.xml.old`)の`<manifest>`ブロックに、package属性を加える。すなわち、
-```
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-```
-を
-```
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.adgad.kboard">
-```
-にする。
-
-### 2
 環境: Mac  
 `./gradlew assembleDebug`を実行すると、次のメッセージとともにビルド失敗する。  
 ```
@@ -330,4 +259,3 @@ implementation 'com.android.volley:volley:1.1.1'
 implementation 'com.android.volley:volley:1.2.1'
 ```
 とする。  
-

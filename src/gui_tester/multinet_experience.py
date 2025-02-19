@@ -2,7 +2,6 @@ from __future__ import annotations
 import random
 
 from gui_tester.experience import Experience                # type: ignore
-# from gui_tester.multinet_replay_buffer import ReplayBuffer  # type: ignore
 from gui_tester.caller_replay_buffer import CallerReplayBuffer      # type: ignore
 from gui_tester.explorer_replay_buffer import ExplorerReplayBuffer  # type: ignore
 import gui_tester.config as config                          # type: ignore
@@ -62,7 +61,6 @@ class MultiNetExperience(Experience):
         if (called_methods & (1 << config.config.target_method_id)) > 0:
             self.target_method_has_been_called = True
     
-    # Override Experience.create_train_data.
     def create_train_data(self):
         assert len(self.experience[-1]) >= 2
         called_methods_bits = self.experience[-1][-1].called_methods
@@ -108,6 +106,5 @@ class MultiNetExperience(Experience):
                 return -1
         return step_num
     
-    # Override
     def sample_batch(self) -> tuple(list(Tensor), list(Tensor)):    # type: ignore
         return (self.explorer_replay_buffer.sample(), self.caller_replay_buffer.sample())

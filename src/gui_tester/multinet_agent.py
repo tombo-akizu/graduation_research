@@ -21,15 +21,8 @@ class MultiNetAgent(Agent):
 
     def __init__(self):
         super().__init__()
-        if config.config.model == "Multi":
-            self.explorer_policy_dqn = Explorer()
-            self.caller_policy_dqn = Caller()
-        else:
-            assert False
-
-        if not config.config.off_per:
-            logger.logger.error("PER for MultiNetAgent hasn't been implemented yet... Please execute with --off_per option.")
-            sys.exit(1)
+        self.explorer_policy_dqn = Explorer()
+        self.caller_policy_dqn = Caller()
 
         self.explorer_target_dqn = copy.deepcopy(self.explorer_policy_dqn)
         self.caller_target_dqn = copy.deepcopy(self.caller_policy_dqn)
@@ -165,13 +158,7 @@ class MultiNetAgent(Agent):
 
         # Collect Q'(s_t+1, argmax_a Q(s_t+1, a))
         with torch.no_grad():
-            target_q = target_dqn(new_state_batch, new_path_batch, target_batch)
-            if not config.config.off_unactionable_flooring:
-                for i, new_state_t in enumerate(new_state_batch):
-                    mask = torch.ones(config.config.state_size, dtype=torch.bool).to(config.config.torch_device)
-                    mask[new_state_t[1:] > 0] = False
-                    target_q[i, mask] = torch.min(target_q[i,:]).item()
-            
+            target_q = target_dqn(new_state_batch, new_path_batch, target_batch)            
             selected_action_indices = target_q.gather(dim=1, index=argmax_action.unsqueeze(1)).squeeze()
 
         expected_state_action_values = reward_batch + config.config.discount_rate * selected_action_indices
@@ -212,6 +199,5 @@ class MultiNetAgent(Agent):
             target_net_state_dict[key] = policy_net_state_dict[key] * config.config.soft_update_rate + target_net_state_dict[key] * (1 - config.config.soft_update_rate)
         target_dqn.load_state_dict(target_net_state_dict)
 
-    # Override
     def get_loss(self):
         return self.loss

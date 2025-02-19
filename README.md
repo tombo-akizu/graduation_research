@@ -1,136 +1,152 @@
-# Setup
-1. Setup COSMO.
-   1. Clone [COSMO](https://github.com/H2SO4T/COSMO) in some directory with `git clone https://github.com/H2SO4T/COSMO.git`.
-   2. Prepare a version of Python supported by COSMO. 3.8 has been confirmed.
-   3. Prepare a target-app project in some directory.
-   4. Modify COSMO's gradle setting with 
+# 概要
+本プロジェクトは、多様なパスで対象メソッドを実行する、Androidアプリケーションの自動GUIテストツールを実装するものである。  
+本ツールは、インストルメンタと自動GUIテスタの2つの機能を有する。
+インストルメンタは、テスト対象アプリケーションに、テストされるのに必要な機能を埋め込むものである。
+自動GUIテスタは、インストルメンタを適用したアプリケーションに対して、多様なパスで対象メソッドを実行するように、自動GUIテストを行う。
+
+# セットアップ
+## 前提
+- Python
+   - バージョン3.9で動作を確認。
+   - `python --version` または`python3 --version` でバージョンが表示されること。
+- Android Studio
+   - ADB
+      - `adb --version` でバージョンが表示されること。
+   - Android Virtual Device
+      - API 25で動作を確認。
+   - ANDROID_HOME環境変数
+      - `echo $ANDROID_HOME` でパスが表示されること。
+      - 対象アプリケーションのビルドに必要。
+- JDK
+   - 対象アプリケーションのビルドに必要。
+
+## セットアップ
+1. 本プロジェクトをダウンロードする。
+2. 本プロジェクトのルートに移動する。
+3. Python仮想環境を作る。`python -m venv .venv` または`python3 -m venv .venv`。
+4. 仮想環境に入る。  
+   Win: `.venv/Scripts/activate`  
+   Mac: `source .venv/bin/activate`
+5. 自身の環境に適したPyTorchを、[PyTorchのHP](https://pytorch.org/get-started/locally/)のコマンドでインストールする。
+6. 本ツールの依存ライブラリをインストールする。`pip install -r requirements.txt`
+
+# 実行
+## 簡易実行
+インストルメント・ビルド済みのapkファイルを用いて、自動GUIテスタだけを実行できる。
+1. `built_apps` から、テストしたいアプリケーションのpklファイルを、`instrument_data/instrument.pkl` として保存する。
+2. 自動GUIテスタを実行する。
    ```
-   cp <root_of_this_project>/template/jacoco-instrumenter-coverage.gradle <root_of_COSMO>/templates/jacoco-instrumenter-coverage.gradle
-   cp <root_of_this_project>/template/jacoco-instrumenter-coverage-old-gradle.gradle <root_of_COSMO>/templates/jacoco-instrumenter-coverage-old-gradle.gradle
+   python src/run.py gui_tester \
+            --package <package_name> \
+            --apk_path <path_to_apk_file_of_target_app> \
+            --target_method_id <method_id> \
+            --limit_hour <test_time(hour)>
    ```
-   5. Add "exported" attribute in instrumented "receiver" node of AndroidManifest.xml.
-      1. Open `<root_of_COSMO>/source_instrumenter.py`
-      2. Insert following line next to the 23'rd line. `receiver.set(ANDROID_NS + 'exported', 'true')`
-   6. Setup COSMO venv.  
-      win
-      ```
-      cd <root_of_COSMO>
-      python -m venv .venv
-      .venv/scripts/activate
-      pip install -r requirements.txt
-      ```
-      mac  
-      ```
-      cd <root_of_COSMO>
-      python3 -m venv .venv
-      source .venv/bin/activate
-      pip install -r requirements.txt
-      ```
-2. Instrument with COSMO.
-   ```
-   python cli.py <absolute_path_to_root_of_target_app>
-   ```
-3. Setup this tool.
-   1. Create venv of this project and activate it.
-   2. Install PyTorch for your environment from the [HP of PyTorch](https://pytorch.org/get-started/locally/).  
-   3. `pip install -r requirements.txt` (Getting Ready).
-4. Instrument with this tool.
+   - package_nameは、"com.serwylo.lexica"などの、アプリケーション固有の名称.
+   - limit_hourは、テストを行う時間。代わりに、limit_episodeとして、エピソード数を指定することもできる。
+   - 現状、あるメソッドのmethod_idを知る方法は、`project/app/src` 以下のjavaファイルを直接読むしかない。メソッドの初めにcallReportメソッドの呼び出しが追加されており、その引数がそのメソッドのmethod_idである。
+3. 出力を確認する。
+   `result` 以下に保存される。詳細は「プロジェクト構成」の節を参照。
+
+## インストルメンタ
+1. 本プロジェクトのルートに移動する。
+2. 仮想環境から出ていれば、入り直す。
+3. 対象アプリケーションのプロジェクトを用意する。そのルートを`<path_to_root_of_target_app>` と記述する。
+4. インストルメンタを実行する。
    ```
    python src/run.py instrument --project_root <path_to_root_of_target_app>
    ```
 
-   You also need to acquire the network permission manually. Open `<path_to_root_of_target_app>/app/src/main/AndroidManifest.xml` and insert following lines into the `<manifest>` block.
+   `project` 以下に、対象アプリケーションのプロジェクトにインストルメントを行なったものが保存される。
+5. 対象アプリケーションにネットワーク権限を付与する。
+   `project/app/src/main/AndroidManifest.xml` を開き、`<manifest>` ブロック内に次の2行を記入する。
    ```
    <uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
    ```
 
-   *This operation should be done by the instrument execution but I haven't implemented yet...*
-
-5. Build the target app.  
-   Move to the root directory of the target app and run the following command.
+   *本来はこれもインストルメンタで行われるべきだが、実装していない。*
+6. 対象アプリケーションをビルドする。
+   `project` に移動し、次のコマンドを実行する。
    ```
    ./gradlew assembleDebug
    ```
-   If something goes wrong, see `buildinfo.md` of this repogitry.
+   `project/app/build/outputs/apk/debug/app-debug.apk` として、対象アプリケーションが得られる。
+   ビルドが上手くいかない場合、`buildinfo.md` を参照すると、助けになるかもしれない。
 
-6. Completed
-   You can get instrumented apk file as `project/app/build/outputs/apk/debug/app-debug.apk`.
+## 自動GUIテスタ
+1. Android Studioを起動し、AVD (Android Virtual Device)を実行する。
+2. AVDとのTCP通信用のポートを指定する。`adb forward tcp:8080 tcp:8080`
+3. 自動GUIテスタを実行する。
+   ```
+   python src/run.py gui_tester \
+            --package <package_name> \
+            --apk_path <path_to_apk_file_of_target_app> \
+            --target_method_id <method_id> \
+            --limit_hour <test_time(hour)>
+   ```
+   - package_nameは、"com.serwylo.lexica"などの、アプリケーション固有の名称.
+   - limit_hourは、テストを行う時間。代わりに、limit_episodeとして、エピソード数を指定することもできる。
+   - 現状、あるメソッドのmethod_idを知る方法は、`project/app/src` 以下のjavaファイルを直接読むしかない。メソッドの初めにreportメソッドの呼び出しが追加されており、その引数がそのメソッドのmethod_idである。
+4. 出力を確認する。
+   `result` 以下に保存される。詳細は「プロジェクト構成」の節を参照。
 
-# Execution
-1. Activate AVD (Android Virtual Device) using Android Studio.
-2. `adb forward tcp:8080 tcp:8080`
-3. `python src/run.py gui_tester --package <package_name> --apk_path <path_to_apk_file> --limit_hour <limit_hour> --target_method_id <target_method_id> --model <model_name>`
-   - package_name: Such as "com.serwylo.lexica".
-   - You can order limit_episode instead of limit_hour
-   - You can know method_id by reading instrumented source code under `project/app/src`. It is given as argument of "callreport" method.
-   - You can choose model_name from "4LP", "4LPWithPath", and "LSTM".
+# プロジェクト構成
+- README.md: 本ファイル。
+- buildinfo.md: 対象アプリケーションのビルドに関するトラブルシューティング。
+- pyproject.toml: Pythonプロジェクトとしての設定ファイル。
+- requirements.txt: 本プロジェクトの依存モジュールリスト。
+- instrument_data
+   - instrument.pkl: インストルメント時の情報を記録し、自動GUIテスタが読み込む。
+- project: インストルメント済み対象アプリケーションのプロジェクトが置かれる。
+- result:   自動GUIテストの出力が保管される。
+   - crash_log: 検出されたクラッシュの記録。
+   - explorer_loss.png, caller_loss.png: 誤差関数の値の遷移。
+   - found_new_path.png: 新規パス発見数の、時間ごとのヒストグラム。
+   - logcat.txt: AVDのログ。FATAL ERRORタグがついているログは、対象アプリケーションのクラッシュによるもの。
+   - path.csv: 各ステップでの情報。
+   - path.txt: パスの発見数。
+   - Qtool.log: loggerのログ。
+- template
+   - CallReport.java:   インストルメントの際に、対象アプリケーションに組み込まれる。
+- test:  本ツールのテストプログラム。
+- src
+   - run.py:   本ツールのエントリポイント。
+   - instrument_data.py:   instrument.pklに保存するデータ構造。インストルメントのログの役割。
+   - logger.py:   ログを出力する。
+   - instrumenter:   インストルメンタを実装する。
+      - run_instrumenter.py:  インストルメンタのエントリポイント。
+      - add_file.py: 対象アプリケーションのプロジェクトに、template/CallReport.javaを加える。
+      - instrument.py:  対象アプリケーションのメソッドの初めに、CallReport.reportの呼び出しを加える。
+   - gui_tester:  自動GUIテスタを実装する。
+      - run_gui_tester.py: 自動GUIテスタのエントリポイント。自動GUIテスタの全体的な流れがわかる。
 
-## Issues
-```
-adb: error: failed to stat remote object '/sdcard/Android/data/com.serwylo.lexica/files/coverage.ec': No such file or directory
-```
-AVDのバージョンが問題だった。  
-API 25で動作することを確認。  
-API 34で本エラーが発生。  
+      - agent.py: エージェントの親クラスを実装。ε-greedy法関連の実装のみが残っている。
+      - multinet_agent.py: agent.pyのクラスの子クラス。DQNを用いて、行動を選択する。
+      - models
+         - explorer.py, caller.py:  2つのDQNのネットワーク構造を定義する。
 
+      - experience.py: 状態・行動・実行されたメソッドの履歴やパスなど、テスト中に得られる情報を保存する。
+      - multinet_experience.py: モデル交代条件を扱う。それぞれのモデルのReplayBufferを有する。
+      - explorer_replay_buffer.py, caller_replay_buffer.py: それぞれのモデルのReplayBuffer。モデル訓練のための訓練データを保存・出力する。
+      - path.py:  パスを管理するデータ構造。
+      - state.py: 状態を管理するデータ構造。状態の通し番号の割り振りも行う。
 
-```
-cp: ./project/app/build/reports/jacoco/jacocoInstrumenterReport/jacocoInstrumenterReport.xml: No such file or directory
-```
-COSMOのカバレッジ集計用設定忘れが原因。  
-COSMOによるインストルメント前に、COSMO/templates/jacoco-instrumenter-coverage.gradleを、本プロジェクトのtemplate/jacoco-instrumenter-coverage.gradleで置換する。  
-変更点は以下の3つ。
-- xmlファイルを出力するために、reportsのxml.enabledをtrueにする。何故か干渉するので、csv.enabledの行を削除する。
-- kotlinソースファイルを網羅率計算に含めるために、includesに"**/tmp/kotlin-classes/**"を加える。
-- 網羅率の保存先を指定するために、`dir: "/coverage"`とする。
+      - env:   AVDとのやり取りを行う。
+         - env.py: アプリケーションのインストール・アンインストールや、起動など。他所からのenvへのアクセスは、env.pyが受け付ける。
+         - observer.py: AVDの画面の状況を、本ツールが扱えるように処理する。
+         - executor.py: 本ツールが決定した行動を、AVDに渡す。
+      - component.py:   AVDの画面上のGUI要素を扱うデータ構造。通し番号の割り振りも行う。
 
+      - tcp_client.py:  AVDとTCP通信を行い、実行されたメソッドを取得する。
+      - progress_manager.py:  テスト時間が指定された値に対してどれだけ経過したかを管理・表示する。
+      - config.py:   定数置き場と化している。
 
-何度も`empty batch`が表示される  
-アプリケーションから、実行されたメソッドを受け取れていない。  
-アプリケーションにネットワーク権限がないかもしれない。
-AndroidManifest.xmlのmanifestの子ノードとして、以下を追加する。  
-`<uses-permission android:name="android.permission.INTERNET" />`
+      - report.py:   出力に必要な情報を保持し、出力を生成する。
+      - log_reader.py:  logcatが出力する、 AVD上のログを処理する。
 
-カバレッジレポートの生成に失敗する。  
-次のメッセージとともにプログラムが終了する。  
-```
-Execution failed for task ':app:jacocoInstrumenterReport'.
-> Error while creating report
-```  
-対象アプリケーションがデバッグビルドされていない可能性がある。
-
-エラーメッセージをわかりやすく
-- AVDと繋がらない
-- adb forward tcp:8080 tcp:8080
-- アプリが元々インストールされている
-- ソケット通信できない
-
-インストルメントの権限拡大
-- manifestのpackage属性
-- receiverのexported属性
-- uses-permission  
-一旦保留して、他のアプリケーションの状態をみて決定する
-
-method_idは環境によって変動するので注意
-
-
-リファクタリング要求
-- Networkの分離
-- State_dictの分離
-- Networkの入力に、target_method_idをとる
-
-性能向上タスク
-- [x] reward rising
-- [x] prioritized experience replay
-- [x] sequenceの0埋め
-- [x] 重複報酬の削除
-- [x] target_valueにおける、無効な行動の値
-- [x] ε調整
-- [x] episode_length調整
-- [x] 関数呼び出しなしの行動に負の報酬を
-
-```
-TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
-```
-python 3.9で確認。3.8に変更すれば解決
+# ブランチ
+graduation_research_experimentブランチは、卒論執筆時点の本プロジェクトのバックアップである。  
+網羅率取得機能が半端に実装されており、提案手法には採用されなかったオプションが選択できる。  
+buildinfo.mdには、網羅率取得ツールCOSMO向けにビルドする方法が含まれる。  
+いずれも提案手法には含まれないものであるため、mainブランチからは削除されている。

@@ -1,0 +1,4 @@
+matplotlib==3.9.3
+packaging==24.2
+tqdm==4.67.1
+uiautomator2==3.2.6

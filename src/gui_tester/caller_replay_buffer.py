@@ -17,9 +17,6 @@ class TrainData():
         if self.action_idx != other.action_idx: return False
         if self.new_state != other.new_state: return False
         return True
-    
-    # def __eq__(self, other):
-
 
 class CallerReplayBuffer():
     def __init__(self):
