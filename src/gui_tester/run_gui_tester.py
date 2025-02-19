@@ -58,7 +58,7 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
             logger.logger.warning("Initial state is Stopped Screen...")
             env.exclude_selected_activity()
             env.reboot()
-            logger.logger.info(env.get_current_path())
+            logger.logger.info(experience.get_current_path())
             continue
         elif current_screen_status == "Out of App":
             logger.logger.warning("Initial state is out of app...")
@@ -115,7 +115,7 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
                 # TODO: Save Error path.
                 logger.logger.warning("Application error occured.")
                 is_terminal = True
-                logger.logger.info(env.get_current_path())
+                logger.logger.info(experience.get_current_path())
             elif is_of_target_application:
                 env.append_activity(current_activity_name)
 
@@ -140,7 +140,7 @@ def run_gui_tester(package, apk_path, device_name, limit_hour, limit_episode, ta
                 # TODO: I want to catch Stopped Screen with this branch but it never transitions into this...
                 logger.logger.warning("Application has stopped.")
                 is_terminal = True
-                logger.logger.info(env.get_current_path())
+                logger.logger.info(experience.get_current_path())
             elif new_screen_status == "Out of App":
                 logger.logger.warning("Failed to recover from out of app.")
                 is_terminal = True
